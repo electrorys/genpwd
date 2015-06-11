@@ -1,0 +1,20 @@
+genpwd - a password generator
+
+takes input in form of master password, a some unique identifier, and some local tweaks like
+password length adjust and offset from which cut it off.
+
+Output forms:
+
+* [a-zA-Z0-9]
+* [0-9]
+* [0-7]
+* [0-f]
+* base85
+* base95 (broken in sense of reverse decoding, but all ASCII printable)
+* ipv4/ipv6/mac address
+* UUID
+* output binary file of given length
+
+The program uses Skein1024 as it's internal engine, defaults are tweakable in defs.h
+
+A gtk2 version of this program is included.
