@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -93,6 +96,32 @@ static void xerror(const char *reason)
 
 #include "selftest.c"
 #include "loadsalt.c"
+
+static void daemonise()
+{
+#ifdef DAEMONISE
+	pid_t pid, sid;
+	int i;
+
+	pid = fork();
+	if (pid < 0)
+		exit(-1);
+	if (pid > 0)
+		exit(0);
+
+	sid = setsid();
+	if (sid < 0)
+		exit(-1);
+
+	close(0);
+	close(1);
+	close(2);
+	for (i = 0; i < 3; i++)
+		open("/dev/null", O_RDWR);
+#else
+	return;
+#endif
+}
 
 /* TODO: may I somehow access gtk2 internals here and clear their buffers too? */
 static void clearfield(GtkWidget *entry)
@@ -320,6 +349,8 @@ int main(int argc, char **argv)
 				break;
 		}
 	}
+
+	daemonise();
 
 	gtk_init(&argc, &argv);
 

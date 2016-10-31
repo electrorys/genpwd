@@ -1,4 +1,4 @@
-CFLAGS+=-Wall -D_XOPEN_SOURCE=500 -D_BSD_SOURCE -O2
+CFLAGS+=-Wall -D_XOPEN_SOURCE=500 -D_BSD_SOURCE -O2 -DDAEMONISE
 
 default: genpwd
 all: genpwd ggenpwd
