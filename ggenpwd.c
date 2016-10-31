@@ -21,6 +21,7 @@
 
 #define _selftestfail	"Self test failed."
 #define _passmismatch	"Passwords don't match"
+#define _genpwd_ids	".genpwd.ids"
 
 #define TITLE_SHOW_CHARS 16
 
@@ -28,6 +29,8 @@ static int repeat;
 static int hidepass;
 static int numopt;
 static char data[1024];
+static char **ids;
+static int nids;
 
 static char *progname;
 
@@ -63,8 +66,8 @@ static char *stoi;
 
 static void usage(void)
 {
-	printf("usage: %s [-rxODX8946mU] [-n PASSES] [-o OFFSET]"
-	       	" [-l PASSLEN] [-N NAME] [-s filename/-]\n\n", progname);
+	printf("usage: %s [-rxODX8946mUN] [-n PASSES] [-o OFFSET]"
+	       	" [-l PASSLEN] [-s filename/-]\n\n", progname);
 	printf("  -r: repeat mode\n");
 	printf("  -x: hide password in \"Password:\" field by default\n");
 	printf("  -O: output only numeric octal password\n");
@@ -78,13 +81,14 @@ static void usage(void)
 	printf("    * - ADDR/PFX: example: 127.16.0.0/16 (generates local address)\n");
 	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
 	printf("  -U: output a UUID\n");
-	printf("  -N NAME: specify name\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
 	       	" 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
+	printf("ggenpwd specific options:\n");
+	printf("  -N: do not load and save ID data typed in Name field\n\n");
 	exit(1);
 }
 
@@ -123,21 +127,136 @@ static void daemonise()
 #endif
 }
 
-/* TODO: may I somehow access gtk2 internals here and clear their buffers too? */
-static void clearfield(GtkWidget *entry)
+static int dupid(const char *id)
 {
-	gtk_entry_set_text(GTK_ENTRY(entry), "");
+	int x;
+
+	if (!ids) return 0;
+
+	for (x = 0; x < nids; x++) {
+		if (!*(ids+x)) return 0;
+		if (!strcmp(*(ids+x), id)) return 1;
+	}
+
+	return 0;
+}
+
+static void addid(const char *id)
+{
+	if (!ids) return;
+
+	ids = realloc(ids, sizeof(char *) * (nids + 1));
+	if (!ids) return;
+	*(ids+nids) = strdup(id);
+	if (!*(ids+nids)) {
+		ids = NULL;
+		return;
+	}
+	nids++;
+}
+
+static void freeids(void)
+{
+	int x;
+	size_t l;
+
+	if (!ids) return;
+
+	for (x = 0; x < nids; x++) {
+		if (!*(ids+x)) continue;
+		l = strlen(*(ids+x));
+		memset(*(ids+x), 0, l+1);
+		free(*(ids+x));
+	}
+
+	free(ids); ids = NULL;
+}
+
+static void loadids(void)
+{
+	char path[PATH_MAX], *ppath;
+	FILE *f;
+
+	if (nids == -1) return;
+	ids = malloc(sizeof(char *));
+	if (!ids) return;
+
+	ppath = getenv("HOME");
+	if (!ppath) return;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
+
+	f = fopen(path, "r");
+	if (!f) return;
+
+	memset(path, 0, sizeof(path));
+
+	while (fgets(path, sizeof(path), f)) {
+		if (*path == '\n' || *path == '#') continue;
+		*(path+strnlen(path, sizeof(path))-1) = 0;
+
+		addid(path);
+
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), path);
+		memset(path, 0, sizeof(path));
+	}
+
+	fclose(f);
+}
+
+static void saveids(void)
+{
+	char path[PATH_MAX], *ppath;
+	FILE *f;
+	int x;
+
+	if (nids == -1) return;
+	if (!ids) return;
+
+	ppath = getenv("HOME");
+	if (!ppath) return;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
+
+	f = fopen(path, "w");
+	if (!f) return;
+
+	memset(path, 0, sizeof(path));
+
+	x = 0;
+	while (x < nids) {
+		fputs(*(ids+x), f);
+		fputc('\n', f);
+		x++;
+	}
+
+	freeids();
+	fclose(f);
+}
+
+/* TODO: may I somehow access gtk2 internals here and clear their buffers too? */
+static void clearfield(GtkWidget *entry, int iscombo)
+{
+	GtkWidget *e = entry;
+
+	if (iscombo)
+		e = gtk_bin_get_child(GTK_BIN(entry));
+
+	gtk_entry_set_text(GTK_ENTRY(e), "");
 }
 
 static void xonexit(void)
 {
 	memset(data, 0, sizeof(data));
-	clearfield(entry[0]);
-	clearfield(entry[1]);
-	clearfield(entry[2]);
+	clearfield(entry[0], 0);
+	clearfield(entry[1], 1);
+	clearfield(entry[2], 0);
 	if (repeat)
-		clearfield(entry[3]);
+		clearfield(entry[3], 0);
 
+	saveids();
 	gtk_main_quit();
 }
 
@@ -159,7 +278,7 @@ static void process_entries(void)
 	const char *d[4] = {NULL};
 
 	buffer[0] = gtk_entry_get_text(GTK_ENTRY(entry[0]));
-	buffer[1] = gtk_entry_get_text(GTK_ENTRY(entry[1]));
+	buffer[1] = gtk_entry_get_text(GTK_ENTRY(gtk_bin_get_child(GTK_BIN(entry[1]))));
 	if (repeat)
 		buffer[2] = gtk_entry_get_text(GTK_ENTRY(entry[3]));
 
@@ -198,6 +317,11 @@ static void process_entries(void)
 		gtk_window_set_focus(GTK_WINDOW(window), entry[2]);
 		gtk_widget_set_sensitive(cpbutton, TRUE);
 		memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
+
+		if (!dupid(buffer[1])) {
+			addid(buffer[1]);
+			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), buffer[1]);
+		}
 	}
 	else {
 		gtk_window_set_focus(GTK_WINDOW(window), entry[0]);
@@ -222,17 +346,17 @@ static void resetfield(GtkWidget *X)
 	else if (X == mrclbutton && repeat) x = 3;
 	else if (X == nclbutton) x = 1;
 
-	clearfield(entry[x]);
-	gtk_window_set_focus(GTK_WINDOW(window), entry[x]);
+	clearfield(entry[x], x == 1 ? 1 : 0);
+	if (x != 1) gtk_window_set_focus(GTK_WINDOW(window), entry[x]);
 }
 
 static void resetfields(void)
 {
-	clearfield(entry[0]);
-	clearfield(entry[1]);
-	clearfield(entry[2]);
+	clearfield(entry[0], 0);
+	clearfield(entry[1], 1);
+	clearfield(entry[2], 0);
 	if (repeat)
-		clearfield(entry[3]);
+		clearfield(entry[3], 0);
 	else gtk_widget_set_sensitive(cpbutton, FALSE);
 	gtk_widget_set_sensitive(clbutton, FALSE);
 
@@ -275,12 +399,11 @@ int main(int argc, char **argv)
 
 	int selftestflag = 1;
 	if (!selftest()) selftestflag = 0;
-	char name[256] = {0};
 
 	if (!selftestflag) fprintf(stderr, "%s Program probably broken.\n", _selftestfail);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:rxo:l:ODX89s:N:4::6::m::U")) != -1) {
+	while ((c = getopt(argc, argv, "n:rxo:l:ODX89s:4::6::m::UN")) != -1) {
 		switch (c) {
 			case 'r':
 				repeat = 1;
@@ -323,9 +446,6 @@ int main(int argc, char **argv)
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
 				break;
-			case 'N':
-				strncpy(name, optarg, sizeof(name)-1);
-				break;
 			case '4':
 				numopt = 0x1004;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
@@ -343,6 +463,9 @@ int main(int argc, char **argv)
 				break;
 			case 'U':
 				numopt = 0xff;
+				break;
+			case 'N':
+				nids = -1;
 				break;
 			default:
 				usage();
@@ -380,14 +503,12 @@ int main(int argc, char **argv)
 	pwlabel = gtk_label_new("Password: ");
 
 	entry[0] = gtk_entry_new();
-	entry[1] = gtk_entry_new();
-	if (name[0]) {
-		gtk_entry_set_text(GTK_ENTRY(entry[1]), name);
-		memset(name, 0, sizeof(name));
-	}
+	entry[1] = gtk_combo_box_text_new_with_entry();
 	entry[2] = gtk_entry_new();
 	if (repeat)
 		entry[3] = gtk_entry_new();
+
+	loadids();
 
 	gtk_widget_modify_font(entry[2], pango_font_description_from_string("monospace"));
 
