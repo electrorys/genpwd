@@ -31,6 +31,7 @@ static int numopt;
 static char data[1024];
 static char **ids;
 static int nids;
+static int needtosaveids;
 
 static char *progname;
 
@@ -213,6 +214,7 @@ static void saveids(void)
 
 	if (nids == -1) return;
 	if (!ids) return;
+	if (!needtosaveids) return;
 
 	ppath = getenv("HOME");
 	if (!ppath) return;
@@ -320,6 +322,7 @@ static void process_entries(void)
 
 		if (!dupid(buffer[1])) {
 			addid(buffer[1]);
+			needtosaveids = 1;
 			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), buffer[1]);
 		}
 	}
