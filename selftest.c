@@ -1,28 +1,33 @@
-// included from g/genpwd.c
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include "mkpwd.h"
 
 typedef struct {
-	const char *master; // password
-	const unsigned char *salt; size_t slen; // salt and it's len
-	const char *name; // nickname
-	int rounds, offs, plen; // rounds, offset and pass length
-	const char *xpwd; // result password to match
+	const char *master;
+	const unsigned char *salt; size_t slen;
+	const char *name;
+	int rounds, offs, plen;
+	const char *xpwd;
 } pwdtest_t;
 
-static int selftest(void)
+int selftest(void)
 {
 	int i, ret = 1;
 	const char *d[] = {NULL, NULL, NULL};
 	char *xpwd = NULL;
-	pwdtest_t ptst[3]; memset(&ptst, 0, sizeof(ptst));
+	pwdtest_t ptst[3];
+	const unsigned char salt0[] = {0xa6, 0x5d, 0x7f, 0x7e};
+	const unsigned char salt1[] = {0xd1, 0x23, 0xbb, 0x35, 0xa9, 0x92, 0x78, 0x42, 0xca, 0x8d};
+
+	memset(&ptst, 0, sizeof(ptst));
 
 	ptst[0].master = "test"; ptst[0].name = "test";
-	const unsigned char salt0[] = {0xa6, 0x5d, 0x7f, 0x7e};
 	ptst[0].salt = salt0; ptst[0].slen = sizeof(salt0);
 	ptst[0].rounds = 887; ptst[0].offs = 11; ptst[0].plen = 30;
 	ptst[0].xpwd = "BRqetv5PIFEVgr8KEuyCiXKQ66xZZX";
 
 	ptst[1].master = "tIXV75fU9Qk7uI"; ptst[1].name = "user@example.org";
-	const unsigned char salt1[] = {0xd1, 0x23, 0xbb, 0x35, 0xa9, 0x92, 0x78, 0x42, 0xca, 0x8d};
 	ptst[1].salt = salt1; ptst[1].slen = sizeof(salt1);
 	ptst[1].rounds = 4056; ptst[1].offs = 17; ptst[1].plen = 25;
 	ptst[1].xpwd = "vqS8Q4Y63aGgQI0DbvFeFeU2D";

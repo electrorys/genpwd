@@ -3,7 +3,7 @@
 
 static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static void b64_encode(char *dst, const unsigned char *src, size_t length)
+void b64_encode(char *dst, const unsigned char *src, size_t length)
 {
 	unsigned char in[3] = {0};
 	char *p = NULL;
@@ -32,42 +32,7 @@ static void b64_encode(char *dst, const unsigned char *src, size_t length)
 	}
 }
 
-#if 0
-static void b64_decode(unsigned char *dst, const char *src, size_t len)
-{
-	int c, phase, i;
-	unsigned char in[4] = {0};
-	char *p = NULL, *d = NULL;
-
-	phase = 0; i=0; d = dst;
-	while (src[i] && i < len)
-	{
-		c = (int) src[i];
-		if (c == '=') {
-			d[0] = in[0] << 2 | in[1] >> 4;
-			d[1] = in[1] << 4 | in[2] >> 2;
-			d[2] = in[2] << 6 | in[3] >> 0;
-			d += 3;
-			break;
-		}
-		p = strchr(b64, c);
-		if (p) {
-			in[phase] = p - b64;
-			phase = (phase + 1) % 4;
-			if (phase == 0) {
-				d[0] = in[0] << 2 | in[1] >> 4;
-				d[1] = in[1] << 4 | in[2] >> 2;
-				d[2] = in[2] << 6 | in[3] >> 0;
-				d += 3;
-				in[0] = in[1] = in[2] = in[3] = 0;
-			}
-		}
-		i++;
-	}
-}
-#endif
-
-static void stripchr(char *s, const char *rem)
+void stripchr(char *s, const char *rem)
 {
 	const char *rst = rem;
 	char *d = s;

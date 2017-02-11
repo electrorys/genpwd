@@ -7,7 +7,7 @@
 #include <libgen.h>
 #include <sys/stat.h>
 
-#include "mkpwd.h"
+#include "genpwd.h"
 #include "defs.h"
 
 #define _strpp(x) #x
@@ -49,14 +49,11 @@ static void usage(void)
 	exit(1);
 }
 
-static void xerror(const char *reason)
+void xerror(const char *reason)
 {
 	fprintf(stderr, "%s\n", reason);
 	exit(2);
 }
-
-#include "selftest.c"
-#include "loadsalt.c"
 
 /* Thanks to musl for this code */
 static void getpasswd(char *password, const char *echo, size_t pwdlen)

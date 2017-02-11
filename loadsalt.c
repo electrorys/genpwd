@@ -1,8 +1,11 @@
-// included from g/genpwd.c
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
 
-static void loadsalt(const char *fname, const unsigned char **P, size_t *B)
+extern void xerror(const char *reason);
+
+void loadsalt(const char *fname, const unsigned char **P, size_t *B)
 {
 	FILE *f = NULL;
 	unsigned char *p;

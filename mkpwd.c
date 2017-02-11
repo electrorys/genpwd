@@ -3,12 +3,9 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include "mkpwd.h"
+#include "genpwd.h"
 
-#include "skein.c"
-#include "base64.c"
-#include "hash95.c"
-
-#define _mkpwd_data_max 2 // master and name
+#define _mkpwd_data_max 2
 
 int rounds = 2000, offset = 0, passlen = 100, dechex = 0;
 
@@ -315,16 +312,3 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 }
 
 #undef _mkpwd_data_max
-
-#if 0
-char *mkpwd_r(char *output, size_t outlen, void *salt, size_t slen, const char **data)
-{
-	char *x;
-
-	x = mkpwd(salt, slen, data);
-	if (strlen(x) > outlen) return "*";
-	strncpy(output, x, outlen);
-
-	return output;
-}
-#endif

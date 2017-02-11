@@ -9,7 +9,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
-#include "mkpwd.h"
+#include "genpwd.h"
 #include "defs.h"
 
 #include "icon.h"
@@ -93,14 +93,11 @@ static void usage(void)
 	exit(1);
 }
 
-static void xerror(const char *reason)
+void xerror(const char *reason)
 {
 	fprintf(stderr, "%s\n", reason);
 	exit(2);
 }
-
-#include "selftest.c"
-#include "loadsalt.c"
 
 static void daemonise()
 {

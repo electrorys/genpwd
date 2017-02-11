@@ -1,5 +1,3 @@
-// included from mkpwd.c
-
 /*
  * This code is based on git's base85.c, but there also other versions of this floating around
  * Converted to full-ascii version, possibly with loss of data inside (one-way for passwords)
@@ -9,6 +7,7 @@
 
 
 #include <stdint.h>
+#include <string.h>
 
 static uint8_t entab[95];
 
@@ -20,7 +19,7 @@ static void mktab85(void)
 	for (i = 0; i < 85; i++) entab[i] = ' ' + i;
 }
 
-static void hash85(char *dst, const unsigned char *src, size_t len)
+void hash85(char *dst, const unsigned char *src, size_t len)
 {
 	size_t x = len;
 	uint32_t cc = 0, ch = 0, cv = 0;
@@ -51,7 +50,7 @@ static void mktab95(void)
 	for (i = 0; i < 95; i++) entab[i] = ' ' + i;
 }
 
-static void hash95(char *dst, const unsigned char *src, size_t len)
+void hash95(char *dst, const unsigned char *src, size_t len)
 {
 	size_t x = len;
 	uint32_t cc = 0, ch = 0, cv = 0;
