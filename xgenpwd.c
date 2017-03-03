@@ -24,7 +24,7 @@ static const char *poverwr = overwr;
 static FL_FORM *form;
 static Window win;
 static FL_OBJECT *master, *name, *outbox, *idsbr;
-static FL_OBJECT *mkbutton, *copybutton, *clearbutton, *quitbutton;
+static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
 
 #include "icon.xpm"
@@ -130,14 +130,18 @@ static void copyclipboard(void)
 	fl_stuff_clipboard(outbox, 0, data, len, NULL);
 }
 
+static void clearinput(FL_OBJECT *input)
+{
+	fl_set_input(input, poverwr);
+	fl_set_input(input, "");
+}
+
 static void clearentries(void)
 {
-	fl_set_input(master, poverwr);
-	fl_set_input(name, poverwr);
-	fl_set_object_label(outbox, poverwr);
+	clearinput(master);
+	clearinput(name);
 
-	fl_set_input(master, "");
-	fl_set_input(name, "");
+	fl_set_object_label(outbox, poverwr);
 	fl_set_object_label(outbox, "");
 
 	fl_wintitle(win, progname);
@@ -236,17 +240,23 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 370);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 360);
 
-	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 270, 30, "Master:");
+	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 240, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
 	fl_set_object_dblclick(master, 0);
 	fl_set_input_maxchars(master, 64); /* XXX */
 
-	name = fl_add_input(FL_NORMAL_INPUT, 5, 40, 270, 30, "Name:");
+	masbut = fl_add_button(FL_NORMAL_BUTTON, 250, 5, 25, 25, "X");
+	fl_set_object_shortcut(masbut, "^T", 0);
+
+	name = fl_add_input(FL_NORMAL_INPUT, 5, 35, 240, 25, NULL);
 	fl_set_object_return(name, FL_RETURN_CHANGED);
 
-	idsbr = fl_add_browser(FL_HOLD_BROWSER, 5, 75, 270, 200, "");
+	nambut = fl_add_button(FL_NORMAL_BUTTON, 250, 35, 25, 25, "X");
+	fl_set_object_shortcut(nambut, "^U", 0);
+
+	idsbr = fl_add_browser(FL_HOLD_BROWSER, 5, 65, 270, 200, NULL);
 	fl_set_object_callback(idsbr, select_entry, 0);
 	fl_set_object_dblbuffer(idsbr, 1);
 	fl_freeze_form(form);
@@ -254,15 +264,15 @@ int main(int argc, char **argv)
 	fl_unfreeze_form(form);
 	fl_set_browser_topline(idsbr, 1);
 
-	outbox = fl_add_box(FL_SHADOW_BOX, 5, 280, 270, 50, "");
+	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, NULL);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 335, 60, 30, "Make");
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 325, 60, 30, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 335, 60, 30, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 325, 60, 30, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 335, 60, 30, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 325, 60, 30, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 335, 60, 30, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 325, 60, 30, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
@@ -283,7 +293,10 @@ int main(int argc, char **argv)
 			copyclipboard();
 		else if (called == clearbutton)
 			clearentries();
-		else if (called == idsbr) break;
+		else if (called == masbut)
+			clearinput(master);
+		else if (called == nambut)
+			clearinput(name);
 		else if (called == quitbutton) break;
 
 		restoreinputpos();
