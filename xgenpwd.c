@@ -294,9 +294,7 @@ int main(int argc, char **argv)
 		restoreinputpos();
 	} while ((called = fl_do_forms()));
 
-	fl_set_object_label(outbox, poverwr);
-	fl_set_input(master, poverwr);
-	fl_set_input(name, poverwr);
+	clearentries();
 
 	fl_finish();
 
