@@ -176,7 +176,7 @@ static void process_entries(void)
 
 		if (!dupid(buffer[1])) {
 			addid(buffer[1]);
-			need_to_save_ids = 1;
+			dirty_ids(1);
 			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), buffer[1]);
 		}
 	}

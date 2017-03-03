@@ -72,8 +72,7 @@ static void fill_list(const char *str)
 
 static void select_entry(FL_OBJECT *brobj, long arg)
 {
-	int x = fl_get_browser(brobj);
-	fl_set_input(name, fl_get_browser_line(brobj, x > 0 ? x : -x));
+	fl_set_input(name, fl_get_browser_line(brobj, fl_get_browser(brobj)));
 }
 
 static void saveinputpos(void)
@@ -112,7 +111,7 @@ static void process_entries(void)
 
 	if (!dupid(d[1])) {
 		addid(d[1]);
-		need_to_save_ids = 1;
+		dirty_ids(1);
 		fl_addto_browser(idsbr, d[1]);
 	}
 
@@ -148,6 +147,17 @@ static void clearentries(void)
 	fl_wintitle(win, progname);
 	fl_set_focus_object(form, master);
 	fl_deselect_browser(idsbr);
+}
+
+static void removeitem(void)
+{
+	int x = fl_get_browser(idsbr);
+	const char *line = fl_get_browser_line(idsbr, x);
+
+	clearinput(name);
+	if (!delid(line)) return;
+	fl_delete_browser_line(idsbr, x);
+	dirty_ids(1);
 }
 
 int main(int argc, char **argv)
@@ -298,7 +308,7 @@ int main(int argc, char **argv)
 		else if (called == masbut)
 			clearinput(master);
 		else if (called == nambut)
-			clearinput(name);
+			removeitem();
 		else if (called == quitbutton) break;
 
 		restoreinputpos();

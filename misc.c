@@ -62,6 +62,42 @@ int iscomment(const char *s)
 	return 0;
 }
 
+void dirty_ids(int dirty)
+{
+	need_to_save_ids = dirty;
+}
+
+int findid(const char *id)
+{
+	int x;
+
+	for (x = 0; x < nids; x++) {
+		if (*(ids+x)
+		&& !strcmp(*(ids+x), id)) return x;
+	}
+
+	return -1;
+}
+
+int delid(const char *id)
+{
+	size_t l;
+	int idx;
+
+	idx = findid(id);
+	if (idx == -1) return 0;
+
+	if (*(ids+idx)) {
+		l = strlen(*(ids+idx));
+		memset(*(ids+idx), 0, l+1);
+		free(*(ids+idx));
+		*(ids+idx) = NULL;
+		return 1;
+	}
+
+	return 0;
+}
+
 int dupid(const char *id)
 {
 	int x;
@@ -224,6 +260,7 @@ void loadids(ids_populate_t idpfn)
 	decrypt_ids(f, &data, &dsz);
 	if (!data || !dsz)
 		goto err;
+	*(data+dsz-1) = '\0';
 
 	memset(path, 0, sizeof(path));
 
@@ -266,10 +303,9 @@ void saveids(void)
 
 	memset(path, 0, sizeof(path));
 
-	x = 0; dsz = 0;
-	while (x < nids) {
+	for (x = 0, dsz = 0; x < nids; x++) {
+		if (!*(ids+x)) continue;
 		dsz += strlen(*(ids+x)) + 1;
-		x++;
 	}
 
 	dsz += sizeof(_identifier);
@@ -281,11 +317,15 @@ void saveids(void)
 	base = data + sizeof(_identifier);
 	s = base; *(s-1) = '\n'; x = 0;
 	while (s-base < dsz - sizeof(_identifier)) {
+		if (!*(ids+x)) goto next2;
 		n = strlen(*(ids+x));
-		memcpy(s, *(ids+x), n); *(s-1) = '\n';
-		s += n+1; x++;
+		memcpy(s, *(ids+x), n);
+		*(s-1) = '\n';
+		s += n+1;
+next2:		x++;
 	}
 
+	*(data+dsz-1) = '\n';
 	encrypt_ids(f, data, dsz);
 
 out:	freeids();

@@ -30,6 +30,9 @@ typedef void (*ids_populate_t)(const char *str);
 extern const unsigned char *_salt;
 extern size_t _slen;
 
+void dirty_ids(int dirty);
+int findid(const char *id);
+int delid(const char *id);
 int dupid(const char *id);
 void addid(const char *id);
 void freeids(void);
