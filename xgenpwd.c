@@ -89,13 +89,11 @@ static void restoreinputpos(void)
 
 static void process_entries(void)
 {
-	char cpmaster[256];
+	char cpmaster[MKPWD_OUTPUT_MAX];
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 
 	load_defs();
-	if (passlen > sizeof(cpmaster)-1)
-		passlen = sizeof(cpmaster)-1;
 
 	memset(cpmaster, 0, sizeof(cpmaster));
 	memcpy(cpmaster, fl_get_input(master), passlen);
