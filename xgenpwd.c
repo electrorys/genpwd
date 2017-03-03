@@ -29,13 +29,15 @@ static int xmaster, xname;
 
 #include "icon.xpm"
 
-static int numopt;
+static int format_option;
 static char data[1024];
 
 static char *progname;
 static char newtitle[TITLE_SHOW_CHARS+sizeof("...")];
 
 static char *stoi;
+
+size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
@@ -96,10 +98,10 @@ static void process_entries(void)
 	load_defs();
 
 	memset(cpmaster, 0, sizeof(cpmaster));
-	memcpy(cpmaster, fl_get_input(master), passlen);
+	memcpy(cpmaster, fl_get_input(master), mkpwd_password_length);
 	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
 	if (!d[1][0]) return;
-	if (numopt >= 0x1001 && numopt <= 0x1006) { d[2] = data; d[3] = NULL; }
+	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
 
 	fl_set_object_label(outbox, !*output ? output+1 : output);
@@ -178,19 +180,19 @@ int main(int argc, char **argv)
 				/* ignored for now */
 				break;
 			case 'n':
-				numrounds = strtol(optarg, &stoi, 10);
-				if (*stoi || numrounds < 0 || numrounds > MKPWD_ROUNDS_MAX)
+				default_passes_number = strtol(optarg, &stoi, 10);
+				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
 					xerror("rounds number must be between 0 and "
 						SMKPWD_ROUNDS_MAX);
 				break;
 			case 'o':
-				offs = strtol(optarg, &stoi, 10);
-				if (*stoi || offs < 0 || offs > MKPWD_OUTPUT_MAX)
+				default_string_offset = strtol(optarg, &stoi, 10);
+				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
 					xerror("offset must be between 0 and " SMKPWD_OUTPUT_MAX);
 				break;
 			case 'l':
-				plen = strtol(optarg, &stoi, 10);
-				if (*stoi || !plen || plen < 0 || plen > MKPWD_OUTPUT_MAX)
+				default_password_length = strtol(optarg, &stoi, 10);
+				if (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX)
 					xerror("password length must be between 1 and "
 						SMKPWD_OUTPUT_MAX);
 				break;
@@ -198,40 +200,40 @@ int main(int argc, char **argv)
 				/* ignored */
 				break;
 			case 'O':
-				numopt = 3;
+				format_option = 3;
 				break;
 			case 'D':
-				numopt = 1;
+				format_option = 1;
 				break;
 			case 'X':
-				numopt = 2;
+				format_option = 2;
 				break;
 			case '8':
-				numopt = 4;
+				format_option = 4;
 				break;
 			case '9':
-				numopt = 5;
+				format_option = 5;
 				break;
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
 				break;
 			case '4':
-				numopt = 0x1004;
+				format_option = 0x1004;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0.0.0.0/0");
 				break;
 			case '6':
-				numopt = 0x1006;
+				format_option = 0x1006;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "::/0");
 				break;
 			case 'm':
-				numopt = 0x1001;
+				format_option = 0x1001;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0:0:0:0:0:0.0");
 				break;
 			case 'U':
-				numopt = 0xff;
+				format_option = 0xff;
 				break;
 			case 'N':
 				nids = -1;

@@ -43,9 +43,9 @@ int selftest(void)
 	for (i = 0; i < sizeof(ptst)/sizeof(ptst[0]); i++) {
 		if (!ptst[i].master) continue;
 
-		rounds = ptst[i].rounds;
-		offset = ptst[i].offs;
-		passlen = ptst[i].plen;
+		mkpwd_passes_number = ptst[i].rounds;
+		mkpwd_string_offset = ptst[i].offs;
+		mkpwd_password_length = ptst[i].plen;
 		d[0] = ptst[i].master; d[1] = ptst[i].name;
 
 		xpwd = mkpwd(ptst[i].salt, ptst[i].slen, d);

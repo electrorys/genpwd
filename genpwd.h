@@ -7,6 +7,12 @@
 
 #define _genpwd_ids ".genpwd.ids"
 
+extern const unsigned char salt[];
+extern int default_password_length;
+extern int default_string_offset;
+extern int default_passes_number;
+extern const unsigned char tweak[16];
+
 void load_defs(void);
 
 int selftest(void);

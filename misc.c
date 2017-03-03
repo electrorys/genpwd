@@ -9,7 +9,6 @@
 
 #include "genpwd.h"
 #include "tf1024.h"
-#include "defs.h"
 
 #define _identifier "# _genpwd_ids file"
 
@@ -18,7 +17,7 @@ int nids;
 int need_to_save_ids;
 
 const unsigned char *_salt = salt;
-size_t _slen = sizeof(salt);
+extern size_t _slen;
 
 void xerror(const char *reason)
 {
@@ -177,9 +176,9 @@ static void sk1024_loop(const unsigned char *src, size_t len, unsigned char *dig
 
 void load_defs(void)
 {
-	rounds = numrounds;
-	offset = offs;
-	passlen = plen;
+	mkpwd_passes_number = default_passes_number;
+	mkpwd_string_offset = default_string_offset;
+	mkpwd_password_length = default_password_length;
 }
 
 static void prepare_context(tf1024_ctx *tctx)
@@ -190,8 +189,8 @@ static void prepare_context(tf1024_ctx *tctx)
 	load_defs();
 
 	sk1024(_salt, _slen, key, 1024);
-	if (rounds > 1)
-		sk1024_loop(key, TF_KEY_SIZE, key, 1024, rounds);
+	if (mkpwd_passes_number > 1)
+		sk1024_loop(key, TF_KEY_SIZE, key, 1024, mkpwd_passes_number);
 	tf1024_init(tctx);
 	tf1024_set_tweak(tctx, tweak);
 	tf1024_set_key(tctx, key, TF_KEY_SIZE);

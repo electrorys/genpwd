@@ -27,7 +27,7 @@
 
 static int repeat;
 static int hidepass;
-static int numopt;
+static int format_option;
 static char data[1024];
 
 static char *progname;
@@ -58,6 +58,8 @@ static GtkWidget *spin[2];
 static GtkAccelGroup *agrp;
 
 static char *stoi;
+
+size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
@@ -152,12 +154,11 @@ static void process_entries(void)
 		else
 			if (hidepass) gtk_entry_set_visibility(GTK_ENTRY(entry[2]), FALSE);
 
-		rounds = numrounds;
-		offset = offs;
-		passlen = plen;
-		dechex = numopt;
+		load_defs();
+
+		mkpwd_output_format = format_option;
 		d[0] = buffer[0]; d[1] = buffer[1];
-		if (numopt >= 0x1001 && numopt <= 0x1006) d[2] = data;
+		if (format_option >= 0x1001 && format_option <= 0x1006) d[2] = data;
 		gtk_widget_set_sensitive(mkbutton, FALSE);
 		gtk_widget_queue_draw(mkbutton);
 		while (gtk_events_pending()) gtk_main_iteration();
@@ -223,8 +224,8 @@ static void resetfields(void)
 
 static void changeconfig(void)
 {
-	offs = gtk_spin_button_get_value_as_int((GtkSpinButton *)spin[0]);
-	plen = gtk_spin_button_get_value_as_int((GtkSpinButton *)spin[1]);
+	default_string_offset = gtk_spin_button_get_value_as_int((GtkSpinButton *)spin[0]);
+	default_password_length = gtk_spin_button_get_value_as_int((GtkSpinButton *)spin[1]);
 }
 
 static void clipboardcopy(void *null, int box)
@@ -266,19 +267,19 @@ int main(int argc, char **argv)
 				repeat = 1;
 				break;
 			case 'n':
-				numrounds = strtol(optarg, &stoi, 10);
-				if (*stoi || numrounds < 0 || numrounds > MKPWD_ROUNDS_MAX)
+				default_passes_number = strtol(optarg, &stoi, 10);
+				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
 					xerror("rounds number must be between 0 and "
 						SMKPWD_ROUNDS_MAX);
 				break;
 			case 'o':
-				offs = strtol(optarg, &stoi, 10);
-				if (*stoi || offs < 0 || offs > MKPWD_OUTPUT_MAX)
+				default_string_offset = strtol(optarg, &stoi, 10);
+				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
 					xerror("offset must be between 0 and " SMKPWD_OUTPUT_MAX);
 				break;
 			case 'l':
-				plen = strtol(optarg, &stoi, 10);
-				if (*stoi || !plen || plen < 0 || plen > MKPWD_OUTPUT_MAX)
+				default_password_length = strtol(optarg, &stoi, 10);
+				if (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX)
 					xerror("password length must be between 1 and "
 						SMKPWD_OUTPUT_MAX);
 				break;
@@ -286,40 +287,40 @@ int main(int argc, char **argv)
 				hidepass = 1;
 				break;
 			case 'O':
-				numopt = 3;
+				format_option = 3;
 				break;
 			case 'D':
-				numopt = 1;
+				format_option = 1;
 				break;
 			case 'X':
-				numopt = 2;
+				format_option = 2;
 				break;
 			case '8':
-				numopt = 4;
+				format_option = 4;
 				break;
 			case '9':
-				numopt = 5;
+				format_option = 5;
 				break;
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
 				break;
 			case '4':
-				numopt = 0x1004;
+				format_option = 0x1004;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0.0.0.0/0");
 				break;
 			case '6':
-				numopt = 0x1006;
+				format_option = 0x1006;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "::/0");
 				break;
 			case 'm':
-				numopt = 0x1001;
+				format_option = 0x1001;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0:0:0:0:0:0.0");
 				break;
 			case 'U':
-				numopt = 0xff;
+				format_option = 0xff;
 				break;
 			case 'N':
 				nids = -1;
@@ -378,14 +379,14 @@ int main(int argc, char **argv)
 	nclbutton = gtk_button_new_with_label("Name:");
 	mkbutton = gtk_button_new_with_label("Make");
 
-	adj[0] = (GtkAdjustment *)gtk_adjustment_new(offs, 0.0,
+	adj[0] = (GtkAdjustment *)gtk_adjustment_new(default_string_offset, 0.0,
 		(double)MKPWD_OUTPUT_MAX, 1.0, 0.0, 0.0);
-	adj[1] = (GtkAdjustment *)gtk_adjustment_new(plen, 1.0,
+	adj[1] = (GtkAdjustment *)gtk_adjustment_new(default_password_length, 1.0,
 		(double)MKPWD_OUTPUT_MAX, 1.0, 0.0, 0.0);
 	spin[0] = gtk_spin_button_new(adj[0], 1.0, 0);
 	spin[1] = gtk_spin_button_new(adj[1], 1.0, 0);
 
-	if (numopt > 0xfe) {
+	if (format_option > 0xfe) {
 		gtk_widget_set_sensitive(spin[0], FALSE);
 		gtk_widget_set_sensitive(spin[1], FALSE);
 	}

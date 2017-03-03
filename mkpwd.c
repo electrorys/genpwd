@@ -7,7 +7,7 @@
 
 #define _mkpwd_data_max 2
 
-int rounds = 2000, offset = 0, passlen = 100, dechex = 0;
+int mkpwd_passes_number = 2000, mkpwd_string_offset = 0, mkpwd_password_length = 100, mkpwd_output_format = 0;
 
 static char *stoi;
 
@@ -200,31 +200,31 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 	sk1024_final(&ctx, tmp);
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
-	if (rounds)
-		for (i = 0; i < rounds && i < MKPWD_ROUNDS_MAX; i++)
+	if (mkpwd_passes_number)
+		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
 			sk1024(tmp, sizeof(tmp), tmp, 1024);
 
-	if (!dechex) {
+	if (mkpwd_output_format == 0) {
 		b64_encode(ret, tmp, sizeof(tmp));
 		stripchr(ret, "./+=");
 	}
-	else if (dechex == 4)
+	else if (mkpwd_output_format == 4)
 		hash85(ret, tmp, sizeof(tmp));
-	else if (dechex == 5)
+	else if (mkpwd_output_format == 5)
 		hash95(ret, tmp, sizeof(tmp));
-	else if (dechex == 0x1004) {
+	else if (mkpwd_output_format == 0x1004) {
 		mkipv4(ret, tmp, sizeof(tmp), data[2]);
 		goto _fastret;
 	}
-	else if (dechex == 0x1006) {
+	else if (mkpwd_output_format == 0x1006) {
 		mkipv6(ret, tmp, sizeof(tmp), data[2]);
 		goto _fastret;
 	}
-	else if (dechex == 0x1001) {
+	else if (mkpwd_output_format == 0x1001) {
 		mkmac(ret, tmp, sizeof(tmp), data[2]);
 		goto _fastret;
 	}
-	else if (dechex == 0xff) {
+	else if (mkpwd_output_format == 0xff) {
 		mkuuid(ret, tmp, sizeof(tmp));
 		goto _fastret;
 	}
@@ -233,7 +233,7 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 		char tmpc[4] = {0};
 
 		for (i = 0, d = 0; i < sizeof(tmp) && d < MKPWD_OUTPUT_MAX; i++)
-			switch (dechex) {
+			switch (mkpwd_output_format) {
 			case 1:
 			default:
 				d+=snprintf(tmpc, 4, "%hhu", tmp[i]);
@@ -258,8 +258,8 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 		memset(tmpc, 0, sizeof(tmpc));
 	}
 
-	memmove(ret, ret+offset, passlen);
-	memset(ret+passlen, 0, sizeof(ret)-passlen);
+	memmove(ret, ret+mkpwd_string_offset, mkpwd_password_length);
+	memset(ret+mkpwd_password_length, 0, sizeof(ret)-mkpwd_password_length);
 
 _fastret:
 	memset(tmp, 0, sizeof(tmp));
@@ -281,7 +281,7 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 	int i;
 	static char *ret;
 
-	if (!passlen || passlen >= 0x10000)
+	if (!mkpwd_password_length || mkpwd_password_length >= 0x10000)
 		return "\0Requested output size is bigger than 64K";
 
 	for (i = 0; data[i] && i < _mkpwd_data_max; i++)
@@ -292,11 +292,11 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 		return "\0Master password or name are too long";
 	pwdl = 0;
 
-	ret = malloc(passlen);
+	ret = malloc(mkpwd_password_length);
 	if (!ret) return "\0Can't allocate memory";
-	memset(ret, 0, passlen);
+	memset(ret, 0, mkpwd_password_length);
 
-	sk1024_init(&ctx, passlen * 8);
+	sk1024_init(&ctx, mkpwd_password_length * 8);
 	sk1024_update(&ctx, data[0], strnlen(data[0], MKPWD_INPUT_MAX));
 	sk1024_update(&ctx, salt, slen);
 	for (i = 1; data[i] && i < _mkpwd_data_max; i++)
@@ -304,9 +304,9 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 	sk1024_final(&ctx, ret);
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
-	if (rounds)
-		for (i = 0; i < rounds && i < MKPWD_ROUNDS_MAX; i++)
-			sk1024(ret, sizeof(ret), ret, passlen * 8);
+	if (mkpwd_passes_number)
+		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
+			sk1024(ret, sizeof(ret), ret, mkpwd_password_length * 8);
 
 	return ret;
 }

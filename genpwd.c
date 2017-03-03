@@ -19,6 +19,8 @@ static char *progname = NULL;
 
 static char *stoi;
 
+size_t _slen = sizeof(salt);
+
 static void usage(void)
 {
 	printf("usage: %s [-rODX8946mU] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
@@ -109,7 +111,7 @@ int main(int argc, char **argv)
 	const char *d[] = {master, name, NULL, NULL};
 	char *pwdout = NULL;
 
-	int numopt = 0;
+	int format_option = 0;
 	int repeat = 0;
 	char keyfile[1024] = {0};
 	char data[256] = {0};
@@ -126,37 +128,37 @@ int main(int argc, char **argv)
 				repeat = 1;
 				break;
 			case 'n':
-				numrounds = strtol(optarg, &stoi, 10);
-				if (*stoi || numrounds < 0 || numrounds > MKPWD_ROUNDS_MAX)
+				default_passes_number = strtol(optarg, &stoi, 10);
+				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
 					xerror("rounds number must be between 0 and "
 						SMKPWD_ROUNDS_MAX);
 				break;
 			case 'o':
-				offs = strtol(optarg, &stoi, 10);
-				if (*stoi || offs < 0 || offs > MKPWD_OUTPUT_MAX)
+				default_string_offset = strtol(optarg, &stoi, 10);
+				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
 					xerror("offset must be between 0 and " SMKPWD_OUTPUT_MAX);
 				break;
 			case 'l':
-				plen = strtol(optarg, &stoi, 10);
+				default_password_length = strtol(optarg, &stoi, 10);
 				if (!keyfile[0]
-				&& (*stoi || !plen || plen < 0 || plen > MKPWD_OUTPUT_MAX))
+				&& (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX))
 					xerror("password length must be between 1 and "
 						SMKPWD_OUTPUT_MAX);
 				break;
 			case 'O':
-				numopt = 3;
+				format_option = 3;
 				break;
 			case 'D':
-				numopt = 1;
+				format_option = 1;
 				break;
 			case 'X':
-				numopt = 2;
+				format_option = 2;
 				break;
 			case '8':
-				numopt = 4;
+				format_option = 4;
 				break;
 			case '9':
-				numopt = 5;
+				format_option = 5;
 				break;
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
@@ -168,22 +170,22 @@ int main(int argc, char **argv)
 				strncpy(keyfile, optarg, sizeof(keyfile)-1);
 				break;
 			case '4':
-				numopt = 0x1004;
+				format_option = 0x1004;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0.0.0.0/0");
 				break;
 			case '6':
-				numopt = 0x1006;
+				format_option = 0x1006;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "::/0");
 				break;
 			case 'm':
-				numopt = 0x1001;
+				format_option = 0x1001;
 				if (optarg) strncpy(data, optarg, sizeof(data)-1);
 				else strcpy(data, "0:0:0:0:0:0.0");
 				break;
 			case 'U':
-				numopt = 0xff;
+				format_option = 0xff;
 				break;
 			default:
 				usage();
@@ -208,12 +210,11 @@ _again:
 	if (!name[0])
 		getstring(name, "Enter name:", sizeof(name)-1);
 
-	rounds = numrounds;
-	offset = offs;
-	passlen = plen;
-	dechex = numopt;
+	load_defs();
+
+	mkpwd_output_format = format_option;
 	if (!keyfile[0]) {
-		if (numopt >= 0x1001 && numopt <= 0x1006) d[2] = data;
+		if (format_option >= 0x1001 && format_option <= 0x1006) d[2] = data;
 		pwdout = mkpwd(_salt, _slen, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
@@ -239,9 +240,9 @@ _again:
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(pwdout+1);
 
-		fwrite(pwdout, plen, 1, f);
+		fwrite(pwdout, default_password_length, 1, f);
 		fclose(f);
-		memset(pwdout, 0, plen); free(pwdout);
+		memset(pwdout, 0, default_password_length); free(pwdout);
 	}
 
 	return 0;
