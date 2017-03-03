@@ -16,12 +16,14 @@
 
 #define TITLE_SHOW_CHARS 16
 
+#define _genpwd_ids     ".genpwd.ids"
+
 static char overwr[128];
 static const char *poverwr = overwr;
 
 static FL_FORM *form;
 static Window win;
-static FL_OBJECT *master, *name, *outbox;
+static FL_OBJECT *master, *name, *outbox, *idsbr;
 static FL_OBJECT *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
 
@@ -29,11 +31,6 @@ static int xmaster, xname;
 
 static int numopt;
 static char data[1024];
-#if 0
-static char **ids;
-static int nids;
-static int needtosaveids;
-#endif
 
 static char *progname;
 static char newtitle[TITLE_SHOW_CHARS+sizeof("...")];
@@ -67,40 +64,19 @@ static void usage(void)
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
 	printf("xgenpwd specific options:\n");
-	printf("  -N: (unimplemented)\n\n");
+	printf("  -N: do not load and save ID data typed in Name field\n\n");
 	exit(1);
 }
 
-void xerror(const char *reason)
+static void fill_list(const char *str)
 {
-	fprintf(stderr, "%s\n", reason);
-	exit(2);
+	fl_addto_browser(idsbr, str);
 }
 
-static void daemonise()
+static void select_entry(FL_OBJECT *brobj, long arg)
 {
-#ifdef DAEMONISE
-	pid_t pid, sid;
-	int i;
-
-	pid = fork();
-	if (pid < 0)
-		exit(-1);
-	if (pid > 0)
-		exit(0);
-
-	sid = setsid();
-	if (sid < 0)
-		exit(-1);
-
-	close(0);
-	close(1);
-	close(2);
-	for (i = 0; i < 3; i++)
-		open("/dev/null", O_RDWR);
-#else
-	return;
-#endif
+	int x = fl_get_browser(brobj);
+	fl_set_input(name, fl_get_browser_line(brobj, x > 0 ? x : -x));
 }
 
 static void saveinputpos(void)
@@ -133,6 +109,12 @@ static void process_entries(void)
 
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
+	if (!dupid(d[1])) {
+		addid(d[1]);
+		need_to_save_ids = 1;
+		fl_addto_browser(idsbr, d[1]);
+	}
+
 	memset(newtitle, 0, sizeof(newtitle));
 	memcpy(newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)), d[1], TITLE_SHOW_CHARS);
 	if (strlen(d[1]) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
@@ -160,6 +142,7 @@ static void clearentries(void)
 
 	fl_wintitle(win, progname);
 	fl_set_focus_object(form, master);
+	fl_deselect_browser(idsbr);
 }
 
 int main(int argc, char **argv)
@@ -238,7 +221,7 @@ int main(int argc, char **argv)
 				numopt = 0xff;
 				break;
 			case 'N':
-				/* XXX unimplemented but needed! */
+				nids = -1;
 				break;
 			default:
 				usage();
@@ -253,7 +236,7 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 165);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 370);
 
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 270, 30, "Master:");
 	fl_set_object_return(master, FL_RETURN_CHANGED);
@@ -261,15 +244,23 @@ int main(int argc, char **argv)
 	name = fl_add_input(FL_NORMAL_INPUT, 5, 40, 270, 30, "Name:");
 	fl_set_object_return(name, FL_RETURN_CHANGED);
 
-	outbox = fl_add_box(FL_SHADOW_BOX, 5, 75, 270, 50, "");
+	idsbr = fl_add_browser(FL_HOLD_BROWSER, 5, 75, 270, 200, "");
+	fl_set_object_callback(idsbr, select_entry, 0);
+	fl_set_object_dblbuffer(idsbr, 1);
+	fl_freeze_form(form);
+	loadids(fill_list);
+	fl_unfreeze_form(form);
+	fl_set_browser_topline(idsbr, 1);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 130, 60, 30, "Make");
+	outbox = fl_add_box(FL_SHADOW_BOX, 5, 280, 270, 50, "");
+
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 335, 60, 30, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 130, 60, 30, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 335, 60, 30, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 130, 60, 30, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 335, 60, 30, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 130, 60, 30, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 335, 60, 30, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
@@ -290,12 +281,15 @@ int main(int argc, char **argv)
 			copyclipboard();
 		else if (called == clearbutton)
 			clearentries();
+		else if (called == idsbr) break;
 		else if (called == quitbutton) break;
 
 		restoreinputpos();
 	} while ((called = fl_do_forms()));
 
 	clearentries();
+
+	saveids();
 
 	fl_finish();
 

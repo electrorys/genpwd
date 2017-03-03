@@ -49,12 +49,6 @@ static void usage(void)
 	exit(1);
 }
 
-void xerror(const char *reason)
-{
-	fprintf(stderr, "%s\n", reason);
-	exit(2);
-}
-
 /* Thanks to musl for this code */
 static void getpasswd(char *password, const char *echo, size_t pwdlen)
 {

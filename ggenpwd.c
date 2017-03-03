@@ -29,9 +29,6 @@ static int repeat;
 static int hidepass;
 static int numopt;
 static char data[1024];
-static char **ids;
-static int nids;
-static int needtosaveids;
 
 static char *progname;
 
@@ -93,146 +90,9 @@ static void usage(void)
 	exit(1);
 }
 
-void xerror(const char *reason)
+static void fill_list(const char *str)
 {
-	fprintf(stderr, "%s\n", reason);
-	exit(2);
-}
-
-static void daemonise()
-{
-#ifdef DAEMONISE
-	pid_t pid, sid;
-	int i;
-
-	pid = fork();
-	if (pid < 0)
-		exit(-1);
-	if (pid > 0)
-		exit(0);
-
-	sid = setsid();
-	if (sid < 0)
-		exit(-1);
-
-	close(0);
-	close(1);
-	close(2);
-	for (i = 0; i < 3; i++)
-		open("/dev/null", O_RDWR);
-#else
-	return;
-#endif
-}
-
-static int dupid(const char *id)
-{
-	int x;
-
-	if (!ids) return 0;
-
-	for (x = 0; x < nids; x++) {
-		if (!*(ids+x)) return 0;
-		if (!strcmp(*(ids+x), id)) return 1;
-	}
-
-	return 0;
-}
-
-static void addid(const char *id)
-{
-	if (!ids) return;
-
-	ids = realloc(ids, sizeof(char *) * (nids + 1));
-	if (!ids) return;
-	*(ids+nids) = strdup(id);
-	if (!*(ids+nids)) {
-		ids = NULL;
-		return;
-	}
-	nids++;
-}
-
-static void freeids(void)
-{
-	int x;
-	size_t l;
-
-	if (!ids) return;
-
-	for (x = 0; x < nids; x++) {
-		if (!*(ids+x)) continue;
-		l = strlen(*(ids+x));
-		memset(*(ids+x), 0, l+1);
-		free(*(ids+x));
-	}
-
-	free(ids); ids = NULL;
-}
-
-static void loadids(void)
-{
-	char path[PATH_MAX], *ppath;
-	FILE *f;
-
-	if (nids == -1) return;
-	ids = malloc(sizeof(char *));
-	if (!ids) return;
-
-	ppath = getenv("HOME");
-	if (!ppath) return;
-
-	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
-
-	f = fopen(path, "r");
-	if (!f) return;
-
-	memset(path, 0, sizeof(path));
-
-	while (fgets(path, sizeof(path), f)) {
-		if (*path == '\n' || *path == '#') continue;
-		*(path+strnlen(path, sizeof(path))-1) = 0;
-
-		addid(path);
-
-		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), path);
-		memset(path, 0, sizeof(path));
-	}
-
-	fclose(f);
-}
-
-static void saveids(void)
-{
-	char path[PATH_MAX], *ppath;
-	FILE *f;
-	int x;
-
-	if (nids == -1) return;
-	if (!ids) return;
-	if (!needtosaveids) return;
-
-	ppath = getenv("HOME");
-	if (!ppath) return;
-
-	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
-
-	f = fopen(path, "w");
-	if (!f) return;
-
-	memset(path, 0, sizeof(path));
-
-	x = 0;
-	while (x < nids) {
-		fputs(*(ids+x), f);
-		fputc('\n', f);
-		x++;
-	}
-
-	freeids();
-	fclose(f);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), str);
 }
 
 /* TODO: may I somehow access gtk2 internals here and clear their buffers too? */
@@ -319,7 +179,7 @@ static void process_entries(void)
 
 		if (!dupid(buffer[1])) {
 			addid(buffer[1]);
-			needtosaveids = 1;
+			need_to_save_ids = 1;
 			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), buffer[1]);
 		}
 	}
@@ -508,7 +368,7 @@ int main(int argc, char **argv)
 	if (repeat)
 		entry[3] = gtk_entry_new();
 
-	loadids();
+	loadids(fill_list);
 
 	gtk_widget_modify_font(entry[2], pango_font_description_from_string("monospace"));
 
