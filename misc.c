@@ -6,11 +6,19 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+
 #include "genpwd.h"
+#include "tf1024.h"
+#include "defs.h"
+
+#define _identifier "# _genpwd_ids file"
 
 char **ids;
 int nids;
 int need_to_save_ids;
+
+const unsigned char *_salt = salt;
+size_t _slen = sizeof(salt);
 
 void xerror(const char *reason)
 {
@@ -99,67 +107,187 @@ void freeids(void)
 	free(ids); ids = NULL;
 }
 
+static void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
+			unsigned int bits, unsigned int passes)
+{
+	unsigned char dgst[128] = {0};
+	int x;
+
+	if (passes == 0)
+		return;
+
+	sk1024(src, len, dgst, bits);
+	for (x = 0; x < passes-1; x++)
+		sk1024(dgst, bits/8, dgst, bits);
+
+	memmove(digest, dgst, bits/8);
+	memset(dgst, 0, sizeof(dgst));
+}
+
+void load_defs(void)
+{
+	rounds = numrounds;
+	offset = offs;
+	passlen = plen;
+}
+
+static void prepare_context(tf1024_ctx *tctx)
+{
+	unsigned char key[TF_KEY_SIZE];
+	unsigned char ctr[TF_KEY_SIZE];
+
+	load_defs();
+
+	sk1024(_salt, _slen, key, 1024);
+	if (rounds > 1)
+		sk1024_loop(key, TF_KEY_SIZE, key, 1024, rounds);
+	tf1024_init(tctx);
+	tf1024_set_tweak(tctx, tweak);
+	tf1024_set_key(tctx, key, TF_KEY_SIZE);
+	sk1024(key, TF_KEY_SIZE, ctr, 1024);
+	tf1024_start_counter(tctx, ctr);
+
+	memset(key, 0, TF_KEY_SIZE);
+	memset(ctr, 0, TF_KEY_SIZE);
+}
+
+static int decrypt_ids(FILE *f, char **data, size_t *dsz)
+{
+	struct stat st;
+	char *ret = NULL; size_t n;
+	tf1024_ctx tctx;
+
+	if (fstat(fileno(f), &st) == -1)
+		goto err;
+
+	n = (size_t)st.st_size;
+	memset(&st, 0, sizeof(struct stat));
+	ret = malloc(n);
+	if (!ret) goto err;
+	memset(ret, 0, n);
+
+	prepare_context(&tctx);
+
+	if (fread(ret, n, 1, f) < 1) goto err;
+	tf1024_crypt(&tctx, ret, n, ret);
+	if (strncmp(ret, _identifier, sizeof(_identifier)-1) != 0)
+		goto err;
+
+	tf1024_done(&tctx);
+	*data = ret; *dsz = n;
+
+	return 1;
+
+err:
+	tf1024_done(&tctx);
+	if (ret) {
+		memset(ret, 0, n);
+		free(ret);
+	}
+	*data = NULL;
+	*dsz = 0;
+	return 0;
+}
+
+static void encrypt_ids(FILE *f, char *data, size_t dsz)
+{
+	tf1024_ctx tctx;
+
+	prepare_context(&tctx);
+	tf1024_crypt(&tctx, data, dsz, data);
+
+	fwrite(data, dsz, 1, f);
+
+	tf1024_done(&tctx);
+}
+
 void loadids(ids_populate_t idpfn)
 {
-	char path[PATH_MAX], *ppath;
-	FILE *f;
+	char path[PATH_MAX];
+	FILE *f = NULL;
+	char *data, *s, *d, *t;
+	size_t dsz;
 
-	ppath = getenv("HOME");
-	if (!ppath) return;
+	s = getenv("HOME");
+	if (!s) return;
 
 	if (nids == -1) return;
 	ids = malloc(sizeof(char *));
 	if (!ids) return;
 
 	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
+	snprintf(path, PATH_MAX-1, "%s/%s", s, _genpwd_ids);
 
 	f = fopen(path, "r");
 	if (!f) return;
 
+	decrypt_ids(f, &data, &dsz);
+	if (!data || !dsz)
+		goto err;
+
 	memset(path, 0, sizeof(path));
 
-	while (fgets(path, sizeof(path), f)) {
-		if (*path == '\n' || *path == '#') continue;
-		*(path+strnlen(path, sizeof(path))-1) = 0;
+	s = d = data; t = NULL;
+	while ((s = strtok_r(d, "\n", &t))) {
+		if (d) d = NULL;
 
-		addid(path);
+		if (iscomment(s)) continue;
 
-		idpfn(path);
-		memset(path, 0, sizeof(path));
+		addid(s);
+		idpfn(s);
 	}
 
-	fclose(f);
+	memset(data, 0, dsz);
+	free(data);
+err:	fclose(f);
+	return;
 }
 
 void saveids(void)
 {
-	char path[PATH_MAX], *ppath;
-	FILE *f;
+	char path[PATH_MAX];
+	FILE *f = NULL;
 	int x;
+	char *s, *data, *base;
+	size_t n, dsz;
 
-	if (nids == -1) return;
-	if (!ids) return;
-	if (!need_to_save_ids) return;
+	if (nids == -1) goto out;
+	if (!ids) goto out;
+	if (!need_to_save_ids) goto out;
 
-	ppath = getenv("HOME");
-	if (!ppath) return;
+	s = getenv("HOME");
+	if (!s) goto out;
 
 	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", ppath, _genpwd_ids);
+	snprintf(path, PATH_MAX-1, "%s/%s", s, _genpwd_ids);
 
 	f = fopen(path, "w");
-	if (!f) return;
+	if (!f) goto out;
 
 	memset(path, 0, sizeof(path));
 
-	x = 0;
+	x = 0; dsz = 0;
 	while (x < nids) {
-		fputs(*(ids+x), f);
-		fputc('\n', f);
+		dsz += strlen(*(ids+x)) + 1;
 		x++;
 	}
 
-	freeids();
-	fclose(f);
+	dsz += sizeof(_identifier);
+	data = malloc(dsz);
+	if (!data) goto out;
+	memset(data, 0, dsz);
+	memcpy(data, _identifier, sizeof(_identifier));
+
+	base = data + sizeof(_identifier);
+	s = base; *(s-1) = '\n'; x = 0;
+	while (s-base < dsz - sizeof(_identifier)) {
+		n = strlen(*(ids+x));
+		memcpy(s, *(ids+x), n); *(s-1) = '\n';
+		s += n+1; x++;
+	}
+
+	encrypt_ids(f, data, dsz);
+
+out:	freeids();
+	if (f) fclose(f);
 }

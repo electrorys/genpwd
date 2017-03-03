@@ -37,9 +37,6 @@ static char newtitle[TITLE_SHOW_CHARS+sizeof("...")];
 
 static char *stoi;
 
-static const unsigned char *_salt = salt;
-static size_t _slen = sizeof(salt);
-
 static void usage(void)
 {
 	printf("usage: %s [-rxODX8946mUN] [-n PASSES] [-o OFFSET]"
@@ -97,12 +94,10 @@ static void process_entries(void)
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 
-	rounds = numrounds;
-	offset = offs;
-	passlen = plen;
+	load_defs();
 	if (passlen > sizeof(cpmaster)-1)
 		passlen = sizeof(cpmaster)-1;
-	dechex = numopt;
+
 	memset(cpmaster, 0, sizeof(cpmaster));
 	memcpy(cpmaster, fl_get_input(master), passlen);
 	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
@@ -122,10 +117,10 @@ static void process_entries(void)
 	}
 
 	memset(newtitle, 0, sizeof(newtitle));
-	memcpy(newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)), d[1], TITLE_SHOW_CHARS);
+	memcpy(newtitle, d[1], TITLE_SHOW_CHARS);
 	if (strlen(d[1]) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
 	else fmt = "%s: %s";
-	fl_wintitle_f(win, fmt, progname, newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)));
+	fl_wintitle_f(win, fmt, progname, newtitle);
 }
 
 static void copyclipboard(void)

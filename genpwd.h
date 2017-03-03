@@ -7,6 +7,8 @@
 
 #define _genpwd_ids ".genpwd.ids"
 
+void load_defs(void);
+
 int selftest(void);
 
 void loadsalt(const char *fname, const unsigned char **P, size_t *B);
@@ -24,6 +26,9 @@ extern char **ids;
 extern int nids;
 extern int need_to_save_ids;
 typedef void (*ids_populate_t)(const char *str);
+
+extern const unsigned char *_salt;
+extern size_t _slen;
 
 int dupid(const char *id);
 void addid(const char *id);

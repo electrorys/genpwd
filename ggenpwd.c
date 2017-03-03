@@ -57,9 +57,6 @@ static GtkWidget *spin[2];
 
 static GtkAccelGroup *agrp;
 
-static const unsigned char *_salt = salt;
-static size_t _slen = sizeof(salt);
-
 static char *stoi;
 
 static void usage(void)
