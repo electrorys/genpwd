@@ -97,6 +97,7 @@ static void process_entries(void)
 
 	load_defs();
 
+	mkpwd_output_format = format_option;
 	memset(cpmaster, 0, sizeof(cpmaster));
 	memcpy(cpmaster, fl_get_input(master), mkpwd_password_length);
 	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
