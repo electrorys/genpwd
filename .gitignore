@@ -1,5 +1,9 @@
+_*
 *.swp
 *.o
+*.patch
+*.diff
+tags
 icon.h
 genpwd
 ggenpwd
