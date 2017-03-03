@@ -13,6 +13,10 @@ extern int default_string_offset;
 extern int default_passes_number;
 extern const unsigned char tweak[16];
 
+extern const char testmaster[];
+extern const char testname[];
+extern const char testxpwd[];
+
 void load_defs(void);
 
 int selftest(void);

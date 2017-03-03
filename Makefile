@@ -1,4 +1,5 @@
 override CFLAGS+=-Wall -DTF_FAST -D_XOPEN_SOURCE=700 -D_BSD_SOURCE -O2 -DDAEMONISE
+# override CFLAGS+=-Wall -DTF_FAST -D_XOPEN_SOURCE=700 -D_BSD_SOURCE -O2 -DDAEMONISE -D_SELFTEST_CURRENT
 
 GTK2_CFLAGS:=`pkg-config --cflags gtk+-2.0`
 GTK2_LDFLAGS:=`pkg-config --libs gtk+-2.0`

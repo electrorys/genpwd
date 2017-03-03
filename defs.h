@@ -2,11 +2,10 @@
 const unsigned char salt[] = {0x00, 0x00};
 
 /* selftest data for current salt */
-/* #define _SELFTEST_CURRENT */
 #ifdef _SELFTEST_CURRENT
-static const char testmaster[] = "x";
-static const char testname[] = "x";
-static const char testxpwd[] = "123";
+const char testmaster[] = "x";
+const char testname[] = "x";
+const char testxpwd[] = "123";
 #endif
 
 int default_password_length = 15;

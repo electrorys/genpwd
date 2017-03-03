@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "genpwd.h"
 #include "mkpwd.h"
 
 typedef struct {
@@ -35,7 +36,7 @@ int selftest(void)
 #ifdef _SELFTEST_CURRENT
 #undef _SELFTEST_CURRENT
 	ptst[2].master = testmaster; ptst[2].name = testname;
-	ptst[2].salt = salt; ptst[2].slen = sizeof(salt);
+	ptst[2].salt = salt; ptst[2].slen = _slen;
 	ptst[2].passes_number = default_passes_number; ptst[2].string_offset = default_string_offset; ptst[2].password_length = default_password_length;
 	ptst[2].xpwd = testxpwd;
 #endif
