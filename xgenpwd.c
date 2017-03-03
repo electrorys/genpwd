@@ -279,6 +279,7 @@ int main(int argc, char **argv)
 	win = fl_winget();
 
 	fl_set_form_icon_data(form, icon);
+	fl_set_cursor(win, XC_left_ptr);
 
 	do {
 		saveinputpos();
