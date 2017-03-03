@@ -25,6 +25,8 @@ static FL_OBJECT *master, *name, *outbox;
 static FL_OBJECT *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
 
+#include "icon.xpm"
+
 static int numopt;
 static char data[1024];
 #if 0
@@ -275,6 +277,8 @@ int main(int argc, char **argv)
 	fl_show_form(form, FL_PLACE_CENTER, FL_FULLBORDER, "xgenpwd");
 
 	win = fl_winget();
+
+	fl_set_form_icon_data(form, icon);
 
 	do {
 		saveinputpos();
