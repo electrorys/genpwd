@@ -258,6 +258,7 @@ int main(int argc, char **argv)
 	fl_set_object_shortcut(nambut, "^U", 0);
 
 	idsbr = fl_add_browser(FL_HOLD_BROWSER, 5, 65, 270, 200, NULL);
+	fl_set_object_return(idsbr, FL_RETURN_SELECTION);
 	fl_set_object_callback(idsbr, select_entry, 0);
 	fl_set_object_dblbuffer(idsbr, 1);
 	fl_freeze_form(form);
