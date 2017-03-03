@@ -93,20 +93,26 @@ static void restoreinputpos(void)
 
 static void process_entries(void)
 {
+	char cpmaster[256];
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 
 	rounds = numrounds;
 	offset = offs;
 	passlen = plen;
+	if (passlen > sizeof(cpmaster)-1)
+		passlen = sizeof(cpmaster)-1;
 	dechex = numopt;
-	d[0] = fl_get_input(master); d[1] = fl_get_input(name); d[2] = NULL;
+	memset(cpmaster, 0, sizeof(cpmaster));
+	memcpy(cpmaster, fl_get_input(master), passlen);
+	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
 	if (!d[1][0]) return;
 	if (numopt >= 0x1001 && numopt <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
 
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
+	memset(cpmaster, 0, sizeof(cpmaster));
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
 	if (!dupid(d[1])) {
