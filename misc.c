@@ -62,14 +62,23 @@ int iscomment(const char *s)
 	return 0;
 }
 
+static int ids_disabled(void)
+{
+	if (nids == -1) return 1;
+	return 0;
+}
+
 void dirty_ids(int dirty)
 {
+	if (ids_disabled()) return;
 	need_to_save_ids = dirty;
 }
 
 int findid(const char *id)
 {
 	int x;
+
+	if (ids_disabled()) return 0;
 
 	for (x = 0; x < nids; x++) {
 		if (*(ids+x)
@@ -83,6 +92,8 @@ int delid(const char *id)
 {
 	size_t l;
 	int idx;
+
+	if (ids_disabled()) return 1;
 
 	idx = findid(id);
 	if (idx == -1) return 0;
@@ -102,6 +113,8 @@ int dupid(const char *id)
 {
 	int x;
 
+	if (ids_disabled()) return 1;
+
 	if (iscomment(id)) return 0;
 
 	for (x = 0; x < nids; x++) {
@@ -114,6 +127,8 @@ int dupid(const char *id)
 
 void addid(const char *id)
 {
+	if (ids_disabled()) return;
+
 	if (iscomment(id)) return;
 
 	ids = realloc(ids, sizeof(char *) * (nids + 1));
@@ -131,7 +146,7 @@ void freeids(void)
 	int x;
 	size_t l;
 
-	if (!ids) return;
+	if (ids_disabled() || !ids) return;
 
 	for (x = 0; x < nids; x++) {
 		if (!*(ids+x)) continue;
@@ -193,6 +208,8 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	char *ret = NULL; size_t n;
 	tf1024_ctx tctx;
 
+	if (ids_disabled()) return 1;
+
 	if (fstat(fileno(f), &st) == -1)
 		goto err;
 
@@ -229,6 +246,8 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 {
 	tf1024_ctx tctx;
 
+	if (ids_disabled()) return;
+
 	prepare_context(&tctx);
 	tf1024_crypt(&tctx, data, dsz, data);
 
@@ -244,10 +263,11 @@ void loadids(ids_populate_t idpfn)
 	char *data, *s, *d, *t;
 	size_t dsz;
 
+	if (ids_disabled()) return;
+
 	s = getenv("HOME");
 	if (!s) return;
 
-	if (nids == -1) return;
 	ids = malloc(sizeof(char *));
 	if (!ids) return;
 
@@ -288,7 +308,8 @@ void saveids(void)
 	char *s, *data, *base;
 	size_t n, dsz;
 
-	if (nids == -1) goto out;
+	if (ids_disabled()) return;
+
 	if (!ids) goto out;
 	if (!need_to_save_ids) goto out;
 
