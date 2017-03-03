@@ -240,6 +240,8 @@ int main(int argc, char **argv)
 
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 270, 30, "Master:");
 	fl_set_object_return(master, FL_RETURN_CHANGED);
+	fl_set_object_dblclick(master, 0);
+	fl_set_input_maxchars(master, 64); /* XXX */
 
 	name = fl_add_input(FL_NORMAL_INPUT, 5, 40, 270, 30, "Name:");
 	fl_set_object_return(name, FL_RETURN_CHANGED);
