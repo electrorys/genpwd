@@ -14,10 +14,13 @@
 #define SMKPWD_OUTPUT_MAX _istr(MKPWD_OUTPUT_MAX)
 #define SMKPWD_ROUNDS_MAX _istr(MKPWD_ROUNDS_MAX)
 
+#define TITLE_SHOW_CHARS 16
+
 static char overwr[128];
 static const char *poverwr = overwr;
 
 static FL_FORM *form;
+static Window win;
 static FL_OBJECT *master, *name, *outbox;
 static FL_OBJECT *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
@@ -31,6 +34,7 @@ static int needtosaveids;
 #endif
 
 static char *progname;
+static char newtitle[TITLE_SHOW_CHARS+sizeof("...")];
 
 static char *stoi;
 
@@ -112,7 +116,7 @@ static void restoreinputpos(void)
 static void process_entries(void)
 {
 	const char *d[4] = {NULL};
-	char *output;
+	char *output, *fmt;
 
 	rounds = numrounds;
 	offset = offs;
@@ -126,6 +130,12 @@ static void process_entries(void)
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
+
+	memset(newtitle, 0, sizeof(newtitle));
+	memcpy(newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)), d[1], TITLE_SHOW_CHARS);
+	if (strlen(d[1]) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
+	else fmt = "%s: %s";
+	fl_wintitle_f(win, fmt, progname, newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)));
 }
 
 static void copyclipboard(void)
@@ -146,6 +156,7 @@ static void clearentries(void)
 	fl_set_input(name, "");
 	fl_set_object_label(outbox, "");
 
+	fl_wintitle(win, progname);
 	fl_set_focus_object(form, master);
 }
 
@@ -262,6 +273,8 @@ int main(int argc, char **argv)
 	fl_end_form();
 
 	fl_show_form(form, FL_PLACE_CENTER, FL_FULLBORDER, "xgenpwd");
+
+	win = fl_winget();
 
 	do {
 		saveinputpos();
