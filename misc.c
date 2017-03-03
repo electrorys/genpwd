@@ -162,7 +162,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 
 	n = (size_t)st.st_size;
 	memset(&st, 0, sizeof(struct stat));
-	ret = malloc(n);
+	ret = malloc(n+1);
 	if (!ret) goto err;
 	memset(ret, 0, n);
 
