@@ -7,7 +7,7 @@ typedef struct {
 	const char *master;
 	const unsigned char *salt; size_t slen;
 	const char *name;
-	int rounds, offs, plen;
+	int passes_number, string_offset, password_length;
 	const char *xpwd;
 } pwdtest_t;
 
@@ -24,28 +24,28 @@ int selftest(void)
 
 	ptst[0].master = "test"; ptst[0].name = "test";
 	ptst[0].salt = salt0; ptst[0].slen = sizeof(salt0);
-	ptst[0].rounds = 887; ptst[0].offs = 11; ptst[0].plen = 30;
+	ptst[0].passes_number = 887; ptst[0].string_offset = 11; ptst[0].password_length = 30;
 	ptst[0].xpwd = "BRqetv5PIFEVgr8KEuyCiXKQ66xZZX";
 
 	ptst[1].master = "tIXV75fU9Qk7uI"; ptst[1].name = "user@example.org";
 	ptst[1].salt = salt1; ptst[1].slen = sizeof(salt1);
-	ptst[1].rounds = 4056; ptst[1].offs = 17; ptst[1].plen = 25;
+	ptst[1].passes_number = 4056; ptst[1].string_offset = 17; ptst[1].password_length = 25;
 	ptst[1].xpwd = "vqS8Q4Y63aGgQI0DbvFeFeU2D";
 
 #ifdef _SELFTEST_CURRENT
 #undef _SELFTEST_CURRENT
 	ptst[2].master = testmaster; ptst[2].name = testname;
 	ptst[2].salt = salt; ptst[2].slen = sizeof(salt);
-	ptst[2].rounds = numrounds; ptst[2].offs = offs; ptst[2].plen = plen;
+	ptst[2].passes_number = default_passes_number; ptst[2].string_offset = default_string_offset; ptst[2].password_length = default_password_length;
 	ptst[2].xpwd = testxpwd;
 #endif
 
 	for (i = 0; i < sizeof(ptst)/sizeof(ptst[0]); i++) {
 		if (!ptst[i].master) continue;
 
-		mkpwd_passes_number = ptst[i].rounds;
-		mkpwd_string_offset = ptst[i].offs;
-		mkpwd_password_length = ptst[i].plen;
+		mkpwd_passes_number = ptst[i].passes_number;
+		mkpwd_string_offset = ptst[i].string_offset;
+		mkpwd_password_length = ptst[i].password_length;
 		d[0] = ptst[i].master; d[1] = ptst[i].name;
 
 		xpwd = mkpwd(ptst[i].salt, ptst[i].slen, d);
