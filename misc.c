@@ -94,6 +94,8 @@ int delid(const char *id)
 
 	if (ids_disabled()) return 1;
 
+	if (!id) return 0;
+
 	idx = findid(id);
 	if (idx == -1) return 0;
 
@@ -259,8 +261,9 @@ void loadids(ids_populate_t idpfn)
 {
 	char path[PATH_MAX];
 	FILE *f = NULL;
-	char *data, *s, *d, *t;
-	size_t dsz;
+	char *s, *d, *t;
+	char *data = NULL;
+	size_t dsz = 0;
 
 	if (ids_disabled()) return;
 
