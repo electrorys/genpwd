@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,7 +15,10 @@
 
 char **ids;
 int nids;
-int need_to_save_ids;
+static int need_to_save_ids;
+
+static char *data = NULL;
+static size_t dsz = 0;
 
 const unsigned char *_salt = salt;
 extern size_t _slen;
@@ -61,23 +65,15 @@ int iscomment(const char *s)
 	return 0;
 }
 
-static int ids_disabled(void)
+void to_saveids(int x)
 {
-	if (nids == -1) return 1;
-	return 0;
-}
-
-void dirty_ids(int dirty)
-{
-	if (ids_disabled()) return;
-	need_to_save_ids = dirty;
+	if (need_to_save_ids == -1) return;
+	need_to_save_ids = x;
 }
 
 int findid(const char *id)
 {
 	int x;
-
-	if (ids_disabled()) return 0;
 
 	for (x = 0; x < nids; x++) {
 		if (*(ids+x)
@@ -89,10 +85,8 @@ int findid(const char *id)
 
 int delid(const char *id)
 {
-	size_t l;
 	int idx;
-
-	if (ids_disabled()) return 1;
+	size_t n;
 
 	if (!id) return 0;
 
@@ -100,9 +94,8 @@ int delid(const char *id)
 	if (idx == -1) return 0;
 
 	if (*(ids+idx)) {
-		l = strlen(*(ids+idx));
-		memset(*(ids+idx), 0, l+1);
-		free(*(ids+idx));
+		n = strlen(*(ids+idx));
+		memset(*(ids+idx), 0, n);
 		*(ids+idx) = NULL;
 		return 1;
 	}
@@ -110,11 +103,9 @@ int delid(const char *id)
 	return 0;
 }
 
-int dupid(const char *id)
+int is_dupid(const char *id)
 {
 	int x;
-
-	if (ids_disabled()) return 1;
 
 	if (iscomment(id)) return 0;
 
@@ -126,37 +117,32 @@ int dupid(const char *id)
 	return 0;
 }
 
-void addid(const char *id)
+static void addid_init(const char *id, char *initid)
 {
-	if (ids_disabled()) return;
+	size_t n;
 
-	if (iscomment(id)) return;
+	if ((id && iscomment(id)) || (initid && iscomment(initid))) return;
 
 	ids = realloc(ids, sizeof(char *) * (nids + 1));
-	if (!ids) return;
-	*(ids+nids) = strdup(id);
-	if (!*(ids+nids)) {
-		ids = NULL;
-		return;
+	if (!ids) to_saveids(-1);
+
+	if (!initid) {
+		n = strlen(id);
+		data = realloc(data, dsz+n+1);
+		if (!data) to_saveids(-1);
+		memset(data+dsz, 0, n+1);
+		strncpy(data+dsz, id, n);
+		*(ids+nids) = data+dsz;
+		dsz += n+1;
 	}
+	else *(ids+nids) = initid;
+
 	nids++;
 }
 
-void freeids(void)
+void addid(const char *id)
 {
-	int x;
-	size_t l;
-
-	if (ids_disabled() || !ids) return;
-
-	for (x = 0; x < nids; x++) {
-		if (!*(ids+x)) continue;
-		l = strlen(*(ids+x));
-		memset(*(ids+x), 0, l+1);
-		free(*(ids+x));
-	}
-
-	free(ids); ids = NULL;
+	return addid_init(id, NULL);
 }
 
 static void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
@@ -209,8 +195,6 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	char *ret = NULL; size_t n;
 	tf1024_ctx tctx;
 
-	if (ids_disabled()) return 1;
-
 	if (fstat(fileno(f), &st) == -1)
 		goto err;
 
@@ -218,7 +202,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	memset(&st, 0, sizeof(struct stat));
 	ret = malloc(n+1);
 	if (!ret) goto err;
-	memset(ret, 0, n);
+	memset(ret, 0, n+1);
 
 	prepare_context(&tctx);
 
@@ -247,8 +231,6 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 {
 	tf1024_ctx tctx;
 
-	if (ids_disabled()) return;
-
 	prepare_context(&tctx);
 	tf1024_crypt(&tctx, data, dsz, data);
 
@@ -257,15 +239,33 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 	tf1024_done(&tctx);
 }
 
+static void remove_deadids(char *data, size_t n)
+{
+	char *s, *d, *t;
+	char dmy[2];
+
+	dmy[0] = 0; dmy[1] = 0;
+
+	s = d = data;
+	while (s && s-data < n) {
+		d = memmem(s, n-(s-data), dmy, 2);
+		if (!d) break;
+		t = d+1;
+		while (d-data < n && !*d) d++;
+		if (d-data >= n) {
+			dsz -= (d-t);
+			s = NULL;
+		}
+		else memmove(t, d, n-(d-data));
+	}
+}
+
 void loadids(ids_populate_t idpfn)
 {
 	char path[PATH_MAX];
 	FILE *f = NULL;
 	char *s, *d, *t;
-	char *data = NULL;
-	size_t dsz = 0;
-
-	if (ids_disabled()) return;
+	int x;
 
 	s = getenv("HOME");
 	if (!s) return;
@@ -282,22 +282,19 @@ void loadids(ids_populate_t idpfn)
 	decrypt_ids(f, &data, &dsz);
 	if (!data || !dsz)
 		goto err;
-	*(data+dsz-1) = '\0';
 
 	memset(path, 0, sizeof(path));
 
-	s = d = data; t = NULL;
+	s = d = data; t = NULL; x = 0;
 	while ((s = strtok_r(d, "\n", &t))) {
 		if (d) d = NULL;
 
 		if (iscomment(s)) continue;
 
-		addid(s);
-		idpfn(s);
+		addid_init(NULL, s);
+		if (idpfn) idpfn(s);
 	}
 
-	memset(data, 0, dsz);
-	free(data);
 err:	fclose(f);
 	return;
 }
@@ -306,14 +303,10 @@ void saveids(void)
 {
 	char path[PATH_MAX];
 	FILE *f = NULL;
-	int x;
-	char *s, *data, *base;
-	size_t n, dsz;
-
-	if (ids_disabled()) return;
+	char *s, *d;
 
 	if (!ids) goto out;
-	if (!need_to_save_ids) goto out;
+	if (need_to_save_ids <= 0) goto out;
 
 	s = getenv("HOME");
 	if (!s) goto out;
@@ -326,31 +319,23 @@ void saveids(void)
 
 	memset(path, 0, sizeof(path));
 
-	for (x = 0, dsz = 0; x < nids; x++) {
-		if (!*(ids+x)) continue;
-		dsz += strlen(*(ids+x)) + 1;
+	s = d = data;
+	remove_deadids(data, dsz);
+	while (s && s-data < dsz) {
+		d = memchr(s, '\0', dsz-(s-data));
+		if (d) { *d = '\n'; s = d+1; }
+		else s = NULL;
 	}
 
-	dsz += sizeof(_identifier);
-	data = malloc(dsz);
-	if (!data) goto out;
-	memset(data, 0, dsz);
-	memcpy(data, _identifier, sizeof(_identifier));
-
-	base = data + sizeof(_identifier);
-	s = base; *(s-1) = '\n'; x = 0;
-	while (s-base < dsz - sizeof(_identifier)) {
-		if (!*(ids+x)) goto next2;
-		n = strlen(*(ids+x));
-		memcpy(s, *(ids+x), n);
-		*(s-1) = '\n';
-		s += n+1;
-next2:		x++;
-	}
-
-	*(data+dsz-1) = '\n';
 	encrypt_ids(f, data, dsz);
 
-out:	freeids();
+out:	if (ids) {
+		free(ids);
+		ids = NULL;
+	}
+	if (data) {
+		memset(data, 0, dsz);
+		free(data);
+	}
 	if (f) fclose(f);
 }

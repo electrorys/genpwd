@@ -175,9 +175,9 @@ static void process_entries(void)
 		gtk_widget_set_sensitive(cpbutton, TRUE);
 		memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
-		if (!dupid(buffer[1])) {
+		if (!is_dupid(buffer[1])) {
 			addid(buffer[1]);
-			dirty_ids(1);
+			to_saveids(1);
 			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(entry[1]), buffer[1]);
 		}
 	}
@@ -323,7 +323,7 @@ int main(int argc, char **argv)
 				format_option = 0xff;
 				break;
 			case 'N':
-				nids = -1;
+				to_saveids(-1);
 				break;
 			default:
 				usage();

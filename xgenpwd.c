@@ -110,9 +110,9 @@ static void process_entries(void)
 	memset(cpmaster, 0, sizeof(cpmaster));
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
-	if (!dupid(d[1])) {
+	if (!is_dupid(d[1])) {
 		addid(d[1]);
-		dirty_ids(1);
+		to_saveids(1);
 		fl_addto_browser(idsbr, d[1]);
 	}
 
@@ -158,7 +158,7 @@ static void removeitem(void)
 	clearinput(name);
 	if (!delid(line)) return;
 	fl_delete_browser_line(idsbr, x);
-	dirty_ids(1);
+	to_saveids(1);
 }
 
 int main(int argc, char **argv)
@@ -237,7 +237,7 @@ int main(int argc, char **argv)
 				format_option = 0xff;
 				break;
 			case 'N':
-				nids = -1;
+				to_saveids(-1);
 				break;
 			default:
 				usage();
