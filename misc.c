@@ -105,14 +105,9 @@ int delid(const char *id)
 
 int is_dupid(const char *id)
 {
-	int x;
 
 	if (iscomment(id)) return 0;
-
-	for (x = 0; x < nids; x++) {
-		if (!*(ids+x)) return 0;
-		if (!strcmp(*(ids+x), id)) return 1;
-	}
+	if (findid(id) > -1) return 1;
 
 	return 0;
 }
