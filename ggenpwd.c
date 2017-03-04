@@ -85,7 +85,7 @@ static void usage(void)
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
 	printf("ggenpwd specific options:\n");
-	printf("  -N: do not load and save ID data typed in Name field\n\n");
+	printf("  -N: do not save ID data typed in Name field\n\n");
 	exit(1);
 }
 
