@@ -210,7 +210,7 @@ _again:
 	if (!name[0])
 		getstring(name, "Enter name:", sizeof(name)-1);
 
-	load_defs();
+	mkpwd_adjust();
 
 	mkpwd_output_format = format_option;
 	if (!keyfile[0]) {

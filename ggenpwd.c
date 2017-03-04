@@ -154,7 +154,7 @@ static void process_entries(void)
 		else
 			if (hidepass) gtk_entry_set_visibility(GTK_ENTRY(entry[2]), FALSE);
 
-		load_defs();
+		mkpwd_adjust();
 
 		mkpwd_output_format = format_option;
 		d[0] = buffer[0]; d[1] = buffer[1];

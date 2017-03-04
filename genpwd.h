@@ -17,7 +17,7 @@ extern const char testmaster[];
 extern const char testname[];
 extern const char testxpwd[];
 
-void load_defs(void);
+void mkpwd_adjust(void);
 
 int selftest(void);
 

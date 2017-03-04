@@ -101,7 +101,7 @@ static void process_entries(void)
 	char *output, *fmt;
 	size_t n;
 
-	load_defs();
+	mkpwd_adjust();
 
 	mkpwd_output_format = format_option;
 	memset(cpmaster, 0, sizeof(cpmaster));

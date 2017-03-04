@@ -162,7 +162,7 @@ void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 	memset(dgst, 0, sizeof(dgst));
 }
 
-void load_defs(void)
+void mkpwd_adjust(void)
 {
 	mkpwd_passes_number = default_passes_number;
 	mkpwd_string_offset = default_string_offset;
@@ -174,7 +174,7 @@ static void prepare_context(tf1024_ctx *tctx)
 	unsigned char key[TF_KEY_SIZE];
 	unsigned char ctr[TF_KEY_SIZE];
 
-	load_defs();
+	mkpwd_adjust();
 
 	sk1024(_salt, _slen, key, 1024);
 	if (mkpwd_passes_number > 1)
