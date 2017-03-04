@@ -23,7 +23,7 @@ static const char *poverwr = overwr;
 
 static FL_FORM *form;
 static Window win;
-static FL_OBJECT *master, *name, *outbox, *idsbr;
+static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
 
@@ -92,6 +92,7 @@ static void restoreinputpos(void)
 static void process_entries(void)
 {
 	char cpmaster[MKPWD_OUTPUT_MAX];
+	char mhash[8];
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 
@@ -107,6 +108,16 @@ static void process_entries(void)
 
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
+	memset(mhash, 0, sizeof(mhash));
+	sk1024(cpmaster, strlen(cpmaster), mhash, 16);
+	memset(cpmaster, 0, sizeof(cpmaster));
+	/* reuse cpmaster, no password is here */
+	snprintf(cpmaster, sizeof(cpmaster), "%02hx%02hx",
+		(uint8_t)mhash[0], (uint8_t)mhash[1]);
+
+	fl_set_object_label(mhashbox, cpmaster);
+
+	memset(mhash, 0, sizeof(mhash));
 	memset(cpmaster, 0, sizeof(cpmaster));
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
@@ -144,6 +155,7 @@ static void clearentries(void)
 
 	fl_set_object_label(outbox, poverwr);
 	fl_set_object_label(outbox, "");
+	fl_set_object_label(mhashbox, " -- ");
 
 	fl_wintitle(win, progname);
 	fl_set_focus_object(form, master);
@@ -254,10 +266,12 @@ int main(int argc, char **argv)
 
 	form = fl_bgn_form(FL_BORDER_BOX, 280, 360);
 
-	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 240, 25, NULL);
+	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
 	fl_set_object_dblclick(master, 0);
 	fl_set_input_maxchars(master, 64); /* XXX */
+
+	mhashbox = fl_add_box(FL_FLAT_BOX, 215, 5, 30, 25, " -- ");
 
 	masbut = fl_add_button(FL_NORMAL_BUTTON, 250, 5, 25, 25, "X");
 	fl_set_object_shortcut(masbut, "^T", 0);
@@ -306,8 +320,10 @@ int main(int argc, char **argv)
 			copyclipboard();
 		else if (called == clearbutton)
 			clearentries();
-		else if (called == masbut)
+		else if (called == masbut) {
 			clearinput(master);
+			fl_set_object_label(mhashbox, " -- ");
+		}
 		else if (called == nambut)
 			removeitem();
 		else if (called == quitbutton) break;

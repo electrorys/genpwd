@@ -145,7 +145,7 @@ void addid(const char *id)
 	return addid_init(id, NULL);
 }
 
-static void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
+void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 			unsigned int bits, unsigned int passes)
 {
 	unsigned char dgst[128] = {0};

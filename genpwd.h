@@ -39,6 +39,9 @@ typedef void (*ids_populate_t)(const char *str);
 extern const unsigned char *_salt;
 extern size_t _slen;
 
+void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
+			unsigned int bits, unsigned int passes);
+
 int findid(const char *id);
 int delid(const char *id);
 int is_dupid(const char *id);
