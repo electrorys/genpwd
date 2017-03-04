@@ -268,6 +268,7 @@ int main(int argc, char **argv)
 
 	daemonise();
 
+	fl_set_border_width(-1);
 	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
