@@ -277,7 +277,11 @@ void loadids(ids_populate_t idpfn)
 	snprintf(path, PATH_MAX-1, "%s/%s", s, _genpwd_ids);
 
 	f = fopen(path, "r");
-	if (!f) return;
+	if (!f) {
+		free(ids);
+		ids = NULL;
+		return;
+	}
 
 	decrypt_ids(f, &data, &dsz);
 	if (!data || !dsz)
