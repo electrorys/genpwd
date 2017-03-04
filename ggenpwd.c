@@ -78,14 +78,13 @@ static void usage(void)
 	printf("    * - ADDR/PFX: example: 127.16.0.0/16 (generates local address)\n");
 	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
 	printf("  -U: output a UUID\n");
+	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
 	       	" 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
-	printf("ggenpwd specific options:\n");
-	printf("  -N: do not save ID data typed in Name field\n\n");
 	exit(1);
 }
 

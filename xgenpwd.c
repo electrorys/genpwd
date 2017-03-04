@@ -40,10 +40,8 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-rxODX8946mUN] [-n PASSES] [-o OFFSET]"
+	printf("usage: %s [-ODX8946mUN] [-n PASSES] [-o OFFSET]"
 	       	" [-l PASSLEN] [-s filename/-]\n\n", progname);
-	printf("  -r: (ignored)\n");
-	printf("  -x: (ignored)\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -55,14 +53,13 @@ static void usage(void)
 	printf("    * - ADDR/PFX: example: 127.16.0.0/16 (generates local address)\n");
 	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
 	printf("  -U: output a UUID\n");
+	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
 	       	" 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
-	printf("xgenpwd specific options:\n");
-	printf("  -N: do not save ID data typed in Name field\n\n");
 	exit(1);
 }
 
@@ -196,11 +193,8 @@ int main(int argc, char **argv)
 	memset(overwr, 'X', sizeof(overwr)-1);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:rxo:l:ODX89s:4::6::m::UN")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89s:4::6::m::UN")) != -1) {
 		switch (c) {
-			case 'r':
-				/* ignored for now */
-				break;
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
 				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
@@ -217,9 +211,6 @@ int main(int argc, char **argv)
 				if (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX)
 					xerror("password length must be between 1 and "
 						SMKPWD_OUTPUT_MAX);
-				break;
-			case 'x':
-				/* ignored */
 				break;
 			case 'O':
 				format_option = 3;
