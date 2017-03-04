@@ -96,8 +96,8 @@ static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSE
 
 static void process_entries(void)
 {
-	char cpmaster[MKPWD_OUTPUT_MAX];
-	char mhash[8];
+	char cpmaster[MKPWD_OUTPUT_MAX]; size_t cplen;
+	char mhash[TF_BLOCK_SIZE];
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 
@@ -105,7 +105,9 @@ static void process_entries(void)
 
 	mkpwd_output_format = format_option;
 	memset(cpmaster, 0, sizeof(cpmaster));
-	memcpy(cpmaster, fl_get_input(master), mkpwd_password_length);
+	d[0] = fl_get_input(master);
+	cplen = strlen(d[0]);
+	memcpy(cpmaster, d[0], cplen);
 	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
 	if (!d[1][0]) return;
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
@@ -114,7 +116,7 @@ static void process_entries(void)
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
 	memset(mhash, 0, sizeof(mhash));
-	sk1024(cpmaster, strlen(cpmaster), mhash, 16);
+	sk1024(cpmaster, cplen, mhash, 16);
 	memset(cpmaster, 0, sizeof(cpmaster));
 	/* reuse cpmaster, no password is here */
 	snprintf(cpmaster, sizeof(cpmaster), "%02hx%02hx",
