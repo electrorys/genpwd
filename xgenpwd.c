@@ -109,10 +109,6 @@ static void process_entries(void)
 	if (!d[1][0]) return;
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
-	n = strlen(output);
-
-	set_output_label_size(n);
-	fl_set_object_label(outbox, !*output ? output+1 : output);
 
 	memset(mhash, 0, sizeof(mhash));
 	sk1024(cpmaster, cplen, mhash, 16);
@@ -122,6 +118,15 @@ static void process_entries(void)
 		(uint8_t)mhash[0], (uint8_t)mhash[1]);
 
 	fl_set_object_label(mhashbox, cpmaster);
+
+	n = strlen(output); /* no utf8 there... */
+	if (n != default_password_length) {
+		*output = 0;
+		strcpy(output+1, "INVALID");
+	}
+
+	set_output_label_size(n);
+	fl_set_object_label(outbox, !*output ? output+1 : output);
 
 	memset(mhash, 0, sizeof(mhash));
 	memset(cpmaster, 0, sizeof(cpmaster));
