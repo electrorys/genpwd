@@ -163,7 +163,7 @@ static void clearentries(void)
 	clearinput(name);
 
 	fl_set_object_label(outbox, poverwr);
-	fl_set_object_label(outbox, "");
+	fl_set_object_label(outbox, " -- ");
 	fl_set_object_label(mhashbox, " -- ");
 
 	fl_wintitle(win, progname);
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 	fl_unfreeze_form(form);
 	fl_set_browser_topline(idsbr, 1);
 
-	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, NULL);
+	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, " -- ");
 
 	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 325, 270, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
