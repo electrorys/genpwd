@@ -18,9 +18,6 @@
 
 #define _genpwd_ids     ".genpwd.ids"
 
-static char overwr[128];
-static const char *poverwr = overwr;
-
 static FL_FORM *form;
 static Window win;
 static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
@@ -153,10 +150,30 @@ static void copyclipboard(void)
 	fl_stuff_clipboard(outbox, 0, data, len, NULL);
 }
 
+/* A HACK! But no other way to ensure that password is wiped out... */
+struct zero_input_hack {
+	char *str;
+	unsigned int pad1[2];
+	int pad2[3];
+	int size;
+};
+
+static void safe_zero_input(FL_OBJECT *input)
+{
+	struct zero_input_hack *spec = (struct zero_input_hack *)input->spec;
+	memset(spec->str, 0, spec->size);
+}
+
 static void clearinput(FL_OBJECT *input)
 {
-	fl_set_input(input, poverwr);
-	fl_set_input(input, "");
+	safe_zero_input(input);
+	fl_set_input(input, NULL);
+}
+
+static void safe_zero_object_label(FL_OBJECT *obj)
+{
+	size_t n = strlen(obj->label);
+	memset(obj->label, 0, n);
 }
 
 static void clearentries(void)
@@ -164,8 +181,9 @@ static void clearentries(void)
 	clearinput(master);
 	clearinput(name);
 
-	fl_set_object_label(outbox, poverwr);
+	safe_zero_object_label(outbox);
 	fl_set_object_label(outbox, " -- ");
+	safe_zero_object_label(mhashbox);
 	fl_set_object_label(mhashbox, " -- ");
 
 	fl_wintitle(win, progname);
@@ -193,9 +211,6 @@ int main(int argc, char **argv)
 
 	if (!selftest())
 		xerror("Self test failed. Program probably broken.");
-
-	memset(overwr, 0, sizeof(overwr));
-	memset(overwr, 'X', sizeof(overwr)-1);
 
 	opterr = 0;
 	while ((c = getopt(argc, argv, "n:o:l:ODX89s:4::6::m::UN")) != -1) {
@@ -335,6 +350,7 @@ int main(int argc, char **argv)
 			clearentries();
 		else if (called == masbut) {
 			clearinput(master);
+			safe_zero_object_label(mhashbox);
 			fl_set_object_label(mhashbox, " -- ");
 		}
 		else if (called == nambut)
