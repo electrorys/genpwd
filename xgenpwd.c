@@ -23,7 +23,7 @@ static const char *poverwr = overwr;
 
 static FL_FORM *form;
 static Window win;
-static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr;
+static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static int xmaster, xname;
 
@@ -72,7 +72,7 @@ static void fill_list(const char *str)
 	fl_addto_browser(idsbr, str);
 }
 
-static void select_entry(FL_OBJECT *brobj, long arg)
+static void select_entry(FL_OBJECT *brobj, long arg FL_UNUSED_ARG)
 {
 	fl_set_input(name, fl_get_browser_line(brobj, fl_get_browser(brobj)));
 }
@@ -87,6 +87,11 @@ static void restoreinputpos(void)
 {
 	fl_set_input_cursorpos(master, xmaster, 1);
 	fl_set_input_cursorpos(name, xname, 1);
+}
+
+static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
+{
+	default_password_length = (int)fl_get_counter_value(pwlcnt);
 }
 
 static void process_entries(void)
@@ -264,7 +269,7 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 360);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 385);
 
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
@@ -293,13 +298,22 @@ int main(int argc, char **argv)
 
 	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, NULL);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 325, 60, 30, "Make");
+	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 325, 270, 20, NULL);
+	fl_set_counter_precision(pwlcnt, 0);
+	fl_set_counter_value(pwlcnt, (double)default_password_length);
+	fl_set_counter_bounds(pwlcnt, (double)0, (double)MKPWD_OUTPUT_MAX);
+	fl_set_counter_step(pwlcnt, (double)1, (double)0);
+	fl_set_counter_repeat(pwlcnt, 150);
+	fl_set_counter_min_repeat(pwlcnt, 25);
+	fl_set_object_callback(pwlcnt, set_password_length, 0);
+
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 350, 60, 30, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 325, 60, 30, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 350, 60, 30, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 325, 60, 30, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 350, 60, 30, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 325, 60, 30, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 350, 60, 30, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
