@@ -239,7 +239,7 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 	tf1024_done(&tctx);
 }
 
-static void remove_deadids(char *data, size_t n)
+static void remove_deadids(char *data, size_t *n)
 {
 	char *s, *d, *t;
 	char dmy[2];
@@ -247,16 +247,15 @@ static void remove_deadids(char *data, size_t n)
 	dmy[0] = 0; dmy[1] = 0;
 
 	s = d = data;
-	while (s && s-data < n) {
-		d = memmem(s, n-(s-data), dmy, 2);
+	while (s && s-data < *n) {
+		d = memmem(s, *n-(s-data), dmy, 2);
 		if (!d) break;
 		t = d+1;
-		while (d-data < n && !*d) d++;
-		if (d-data >= n) {
-			dsz -= (d-t);
+		while (d-data < *n && !*d) d++;
+		if (d-data >= *n)
 			s = NULL;
-		}
-		else memmove(t, d, n-(d-data));
+		else memmove(t, d, *n-(d-data));
+		*n -= (d-t);
 	}
 }
 
@@ -324,7 +323,7 @@ void saveids(void)
 	memset(path, 0, sizeof(path));
 
 	s = d = data;
-	remove_deadids(data, dsz);
+	remove_deadids(data, &dsz);
 	while (s && s-data < dsz) {
 		d = memchr(s, '\0', dsz-(s-data));
 		if (d) { *d = '\n'; s = d+1; }
