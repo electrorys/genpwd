@@ -23,8 +23,8 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-rODX8946mU] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-	       	" [-N NAME] [-s/k filename/-]\n\n", progname);
+	printf("usage: %s [-rODX8946mUN] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	       	" [-s/k filename/-]\n\n", progname);
 	printf("  -r: repeat mode\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
@@ -37,7 +37,7 @@ static void usage(void)
 	printf("    * - ADDR/PFX: example: 127.16.0.0/16 (generates local address)\n");
 	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
 	printf("  -U: output a UUID\n");
-	printf("  -N NAME: specify name\n");
+	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:ro:l:ODX89s:N:k:4::6::m::U")) != -1) {
+	while ((c = getopt(argc, argv, "n:ro:l:ODX89s:Nk:4::6::m::U")) != -1) {
 		switch (c) {
 			case 'r':
 				repeat = 1;
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 				loadsalt(optarg, &_salt, &_slen);
 				break;
 			case 'N':
-				strncpy(name, optarg, sizeof(name)-1);
+				to_saveids(-1);
 				break;
 			case 'k':
 				strncpy(keyfile, optarg, sizeof(keyfile)-1);
@@ -210,6 +210,12 @@ _again:
 	if (!name[0])
 		getstring(name, "Enter name:", sizeof(name)-1);
 
+	loadids(NULL);
+	if (!is_dupid(name)) {
+		addid(name);
+		to_saveids(1);
+	}
+
 	mkpwd_adjust();
 
 	mkpwd_output_format = format_option;
@@ -244,6 +250,8 @@ _again:
 		fclose(f);
 		memset(pwdout, 0, default_password_length); free(pwdout);
 	}
+
+	saveids();
 
 	return 0;
 }
