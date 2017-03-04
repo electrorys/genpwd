@@ -25,7 +25,6 @@ static FL_FORM *form;
 static Window win;
 static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
-static int xmaster, xname;
 
 #include "icon.xpm"
 
@@ -77,21 +76,21 @@ static void select_entry(FL_OBJECT *brobj, long arg FL_UNUSED_ARG)
 	fl_set_input(name, fl_get_browser_line(brobj, fl_get_browser(brobj)));
 }
 
-static void saveinputpos(void)
-{
-	xmaster = strlen(fl_get_input(master));
-	xname = strlen(fl_get_input(name));
-}
-
-static void restoreinputpos(void)
-{
-	fl_set_input_cursorpos(master, xmaster, 1);
-	fl_set_input_cursorpos(name, xname, 1);
-}
-
 static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
 {
 	default_password_length = (int)fl_get_counter_value(pwlcnt);
+}
+
+static void set_output_label_size(int output_passwd_length)
+{
+	int lsize;
+
+	if (output_passwd_length < 15) lsize = FL_MEDIUM_SIZE;
+	else if (output_passwd_length < 30) lsize = FL_NORMAL_SIZE;
+	else if (output_passwd_length < 37) lsize = FL_SMALL_SIZE;
+	else lsize = FL_TINY_SIZE;
+
+	fl_set_object_lsize(outbox, lsize);
 }
 
 static void process_entries(void)
@@ -100,6 +99,7 @@ static void process_entries(void)
 	char mhash[TF_BLOCK_SIZE];
 	const char *d[4] = {NULL};
 	char *output, *fmt;
+	size_t n;
 
 	load_defs();
 
@@ -112,7 +112,9 @@ static void process_entries(void)
 	if (!d[1][0]) return;
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
+	n = strlen(output);
 
+	set_output_label_size(n);
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
 	memset(mhash, 0, sizeof(mhash));
@@ -328,8 +330,6 @@ int main(int argc, char **argv)
 	fl_set_cursor(win, XC_left_ptr);
 
 	do {
-		saveinputpos();
-
 		if (called == mkbutton)
 			process_entries();
 		else if (called == copybutton)
@@ -343,8 +343,6 @@ int main(int argc, char **argv)
 		else if (called == nambut)
 			removeitem();
 		else if (called == quitbutton) break;
-
-		restoreinputpos();
 	} while ((called = fl_do_forms()));
 
 	clearentries();
