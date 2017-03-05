@@ -254,6 +254,15 @@ static void remove_deadids(char *data, size_t *n)
 	}
 }
 
+static void alloc_fheader(void)
+{
+	if (data && dsz) return;
+
+	data = malloc(sizeof(_identifier));
+	memcpy(data, _identifier, sizeof(_identifier));
+	dsz = sizeof(_identifier);
+}
+
 void loadids(ids_populate_t idpfn)
 {
 	char path[PATH_MAX];
@@ -272,14 +281,15 @@ void loadids(ids_populate_t idpfn)
 
 	f = fopen(path, "r");
 	if (!f) {
-		free(ids);
-		ids = NULL;
+		alloc_fheader();
 		return;
 	}
 
 	decrypt_ids(f, &data, &dsz);
-	if (!data || !dsz)
+	if (!data || !dsz) {
+		alloc_fheader();
 		goto err;
+	}
 
 	memset(path, 0, sizeof(path));
 
