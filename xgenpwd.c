@@ -29,7 +29,7 @@ static int format_option;
 static char data[1024];
 
 static char *progname;
-static char newtitle[TITLE_SHOW_CHARS+sizeof("...")];
+static char newtitle[64];
 
 static char *stoi;
 
@@ -58,6 +58,67 @@ static void usage(void)
 	printf("  -s filename: load alternative binary salt from filename"
 			" or stdin (if '-')\n\n");
 	exit(1);
+}
+
+struct malloc_cell {
+	size_t size;
+	void *data;
+};
+
+static void *xgenpwd_zalloc(size_t sz)
+{
+	void *p = malloc(sz);
+	if (p) memset(p, 0, sz);
+	return p;
+}
+
+static void xgenpwd_free(void *p)
+{
+	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+
+	if (!p) return;
+
+	if (mc->size) {
+		memset(mc->data, 0, mc->size);
+		mc->size = 0;
+	}
+	memset(mc, 0, sizeof(struct malloc_cell));
+	free(mc);
+}
+
+static void *xgenpwd_malloc(size_t sz)
+{
+	struct malloc_cell *mc = xgenpwd_zalloc(sizeof(struct malloc_cell)+sz);
+
+	if (mc) {
+		mc->data = (void *)((unsigned char *)mc+sizeof(struct malloc_cell));
+		mc->size = sz;
+		return mc->data;
+	}
+	return NULL;
+}
+
+static void *xgenpwd_calloc(size_t nm, size_t sz)
+{
+	return xgenpwd_malloc(nm * sz);
+}
+
+static void *xgenpwd_realloc(void *p, size_t newsz)
+{
+	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+
+	if (!p) return xgenpwd_malloc(newsz);
+
+	if (newsz > mc->size) {
+		void *newdata = xgenpwd_malloc(newsz);
+
+		if (!newdata) return NULL;
+		memcpy(newdata, p, newsz);
+		xgenpwd_free(p);
+
+		return newdata;
+	}
+	return p;
 }
 
 static void fill_list(const char *str)
@@ -136,10 +197,13 @@ static void process_entries(void)
 	}
 
 	memset(newtitle, 0, sizeof(newtitle));
-	memcpy(newtitle, d[1], TITLE_SHOW_CHARS);
+	memcpy(newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)), d[1], TITLE_SHOW_CHARS);
 	if (strlen(d[1]) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
 	else fmt = "%s: %s";
-	fl_wintitle_f(win, fmt, progname, newtitle);
+	snprintf(newtitle, sizeof(newtitle), fmt, progname,
+		newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)));
+	fl_wintitle(win, newtitle);
+	memset(newtitle, 0, sizeof(newtitle));
 }
 
 static void copyclipboard(void)
@@ -208,6 +272,11 @@ int main(int argc, char **argv)
 	FL_OBJECT *called = NULL;
 
 	progname = basename(argv[0]);
+
+	fl_malloc = xgenpwd_malloc;
+	fl_free = xgenpwd_free;
+	fl_realloc = xgenpwd_realloc;
+	fl_calloc = xgenpwd_calloc;
 
 	if (!selftest())
 		xerror("Self test failed. Program probably broken.");
