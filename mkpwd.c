@@ -292,7 +292,7 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 		return "\0Master password or name are too long";
 	pwdl = 0;
 
-	ret = malloc(mkpwd_password_length);
+	ret = genpwd_malloc(mkpwd_password_length);
 	if (!ret) return "\0Can't allocate memory";
 	memset(ret, 0, mkpwd_password_length);
 

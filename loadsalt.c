@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-extern void xerror(const char *reason);
+#include "genpwd.h"
 
 void loadsalt(const char *fname, const unsigned char **P, size_t *B)
 {
@@ -16,7 +15,7 @@ void loadsalt(const char *fname, const unsigned char **P, size_t *B)
 	if (!f) { perror(fname); exit(2); }
 
 _noopen:
-	p = malloc(0);
+	p = genpwd_malloc(0);
 	if (!p) xerror("Can't get memory for salt");
 
 	b = 0;
@@ -24,7 +23,7 @@ _noopen:
 		if (feof(f)) break;
 		l = fread(buf, 1, sizeof(buf), f);
 		if (ferror(f)) { fclose(f); perror("read"); exit(2); }
-		p = realloc(p, b + l); memset(p + b, 0, l);
+		p = genpwd_realloc(p, b + l); memset(p + b, 0, l);
 		memmove(p + b, buf, l); b += l;
 	}
 

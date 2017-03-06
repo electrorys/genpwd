@@ -60,67 +60,6 @@ static void usage(void)
 	exit(1);
 }
 
-struct malloc_cell {
-	size_t size;
-	void *data;
-};
-
-static void *xgenpwd_zalloc(size_t sz)
-{
-	void *p = malloc(sz);
-	if (p) memset(p, 0, sz);
-	return p;
-}
-
-static void xgenpwd_free(void *p)
-{
-	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-
-	if (!p) return;
-
-	if (mc->size) {
-		memset(mc->data, 0, mc->size);
-		mc->size = 0;
-	}
-	memset(mc, 0, sizeof(struct malloc_cell));
-	free(mc);
-}
-
-static void *xgenpwd_malloc(size_t sz)
-{
-	struct malloc_cell *mc = xgenpwd_zalloc(sizeof(struct malloc_cell)+sz);
-
-	if (mc) {
-		mc->data = (void *)((unsigned char *)mc+sizeof(struct malloc_cell));
-		mc->size = sz;
-		return mc->data;
-	}
-	return NULL;
-}
-
-static void *xgenpwd_calloc(size_t nm, size_t sz)
-{
-	return xgenpwd_malloc(nm * sz);
-}
-
-static void *xgenpwd_realloc(void *p, size_t newsz)
-{
-	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-
-	if (!p) return xgenpwd_malloc(newsz);
-
-	if (newsz > mc->size) {
-		void *newdata = xgenpwd_malloc(newsz);
-
-		if (!newdata) return NULL;
-		memcpy(newdata, p, newsz);
-		xgenpwd_free(p);
-
-		return newdata;
-	}
-	return p;
-}
-
 static void fill_list(const char *str)
 {
 	fl_addto_browser(idsbr, str);
@@ -273,10 +212,10 @@ int main(int argc, char **argv)
 
 	progname = basename(argv[0]);
 
-	fl_malloc = xgenpwd_malloc;
-	fl_free = xgenpwd_free;
-	fl_realloc = xgenpwd_realloc;
-	fl_calloc = xgenpwd_calloc;
+	fl_malloc = genpwd_malloc;
+	fl_free = genpwd_free;
+	fl_realloc = genpwd_realloc;
+	fl_calloc = genpwd_calloc;
 
 	if (!selftest())
 		xerror("Self test failed. Program probably broken.");

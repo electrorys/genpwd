@@ -29,6 +29,11 @@ void stripchr(char *s, const char *rem);
 void hash85(char *dst, const unsigned char *src, size_t len);
 void hash95(char *dst, const unsigned char *src, size_t len);
 
+void genpwd_free(void *p);
+void *genpwd_malloc(size_t sz);
+void *genpwd_calloc(size_t nm, size_t sz);
+void *genpwd_realloc(void *p, size_t newsz);
+
 void xerror(const char *reason);
 void daemonise(void);
 

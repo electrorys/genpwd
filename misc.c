@@ -23,6 +23,67 @@ static size_t dsz = 0;
 const unsigned char *_salt = salt;
 extern size_t _slen;
 
+struct malloc_cell {
+	size_t size;
+	void *data;
+};
+
+static void *genpwd_zalloc(size_t sz)
+{
+	void *p = malloc(sz);
+	if (p) memset(p, 0, sz);
+	return p;
+}
+
+void genpwd_free(void *p)
+{
+	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+
+	if (!p) return;
+
+	if (mc->size) {
+		memset(mc->data, 0, mc->size);
+		mc->size = 0;
+	}
+	memset(mc, 0, sizeof(struct malloc_cell));
+	free(mc);
+}
+
+void *genpwd_malloc(size_t sz)
+{
+	struct malloc_cell *mc = genpwd_zalloc(sizeof(struct malloc_cell)+sz);
+
+	if (mc) {
+		mc->data = (void *)((unsigned char *)mc+sizeof(struct malloc_cell));
+		mc->size = sz;
+		return mc->data;
+	}
+	return NULL;
+}
+
+void *genpwd_calloc(size_t nm, size_t sz)
+{
+	return genpwd_malloc(nm * sz);
+}
+
+void *genpwd_realloc(void *p, size_t newsz)
+{
+	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+
+	if (!p) return genpwd_malloc(newsz);
+
+	if (newsz > mc->size) {
+		void *newdata = genpwd_malloc(newsz);
+
+		if (!newdata) return NULL;
+		memcpy(newdata, p, newsz);
+		genpwd_free(p);
+
+		return newdata;
+	}
+	return p;
+}
+
 void xerror(const char *reason)
 {
 	fprintf(stderr, "%s\n", reason);
@@ -120,13 +181,13 @@ static void addid_init(const char *id, char *initid)
 
 	if ((id && iscomment(id)) || (initid && iscomment(initid))) return;
 
-	ids = realloc(ids, sizeof(char *) * (nids + 1));
+	ids = genpwd_realloc(ids, sizeof(char *) * (nids + 1));
 	if (!ids) to_saveids(-1);
 
 	if (!initid) {
 		n = strlen(id);
 		old = data;
-		data = realloc(data, dsz+n+1);
+		data = genpwd_realloc(data, dsz+n+1);
 		if (!data) to_saveids(-1);
 		if (data != old) {
 			for (x = 0; x < nids; x++) {
@@ -204,7 +265,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 
 	n = (size_t)st.st_size;
 	memset(&st, 0, sizeof(struct stat));
-	ret = malloc(n+1);
+	ret = genpwd_malloc(n+1);
 	if (!ret) goto err;
 	memset(ret, 0, n+1);
 
@@ -224,7 +285,7 @@ err:
 	tf1024_done(&tctx);
 	if (ret) {
 		memset(ret, 0, n);
-		free(ret);
+		genpwd_free(ret);
 	}
 	*data = NULL;
 	*dsz = 0;
@@ -267,7 +328,7 @@ static void alloc_fheader(void)
 {
 	if (data && dsz) return;
 
-	data = malloc(sizeof(_identifier));
+	data = genpwd_malloc(sizeof(_identifier));
 	memcpy(data, _identifier, sizeof(_identifier));
 	dsz = sizeof(_identifier);
 }
@@ -282,7 +343,7 @@ void loadids(ids_populate_t idpfn)
 	s = getenv("HOME");
 	if (!s) return;
 
-	ids = malloc(sizeof(char *));
+	ids = genpwd_malloc(sizeof(char *));
 	if (!ids) return;
 
 	memset(path, 0, sizeof(path));
@@ -347,12 +408,12 @@ void saveids(void)
 	encrypt_ids(f, data, dsz);
 
 out:	if (ids) {
-		free(ids);
+		genpwd_free(ids);
 		ids = NULL;
 	}
 	if (data) {
 		memset(data, 0, dsz);
-		free(data);
+		genpwd_free(data);
 	}
 	if (f) fclose(f);
 }
