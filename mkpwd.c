@@ -312,3 +312,17 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 }
 
 #undef _mkpwd_data_max
+
+char *mkpwd_hint(const char *pw, size_t n)
+{
+	static char mhash[TF_BLOCK_SIZE];
+	char *ret;
+
+	memset(mhash, 0, sizeof(mhash));
+	sk1024(pw, n, mhash, 16);
+	ret = mhash + (sizeof(mhash)/2);
+	snprintf(ret, (sizeof(mhash)/2), "%02hx%02hx", (uint8_t)mhash[0], (uint8_t)mhash[1]);
+	memset(mhash, 0, (sizeof(mhash)/2));
+
+	return ret;
+}

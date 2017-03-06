@@ -89,8 +89,7 @@ static void set_output_label_size(int output_passwd_length)
 
 static void process_entries(void)
 {
-	char cpmaster[MKPWD_OUTPUT_MAX]; size_t cplen;
-	char mhash[TF_BLOCK_SIZE];
+	char password[MKPWD_OUTPUT_MAX]; size_t pwl;
 	const char *d[4] = {NULL};
 	char *output, *fmt;
 	size_t n;
@@ -98,23 +97,18 @@ static void process_entries(void)
 	mkpwd_adjust();
 
 	mkpwd_output_format = format_option;
-	memset(cpmaster, 0, sizeof(cpmaster));
+	memset(password, 0, sizeof(password));
 	d[0] = fl_get_input(master);
-	cplen = strlen(d[0]);
-	memcpy(cpmaster, d[0], cplen);
-	d[0] = cpmaster; d[1] = fl_get_input(name); d[2] = NULL;
+	pwl = strlen(d[0]);
+	memcpy(password, d[0], pwl);
+	d[0] = password; d[1] = fl_get_input(name); d[2] = NULL;
 	if (!d[1][0]) return;
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
 
-	memset(mhash, 0, sizeof(mhash));
-	sk1024(cpmaster, cplen, mhash, 16);
-	memset(cpmaster, 0, sizeof(cpmaster));
-	/* reuse cpmaster, no password is here */
-	snprintf(cpmaster, sizeof(cpmaster), "%02hx%02hx",
-		(uint8_t)mhash[0], (uint8_t)mhash[1]);
-
-	fl_set_object_label(mhashbox, cpmaster);
+	fmt = mkpwd_hint(password, pwl);
+	fl_set_object_label(mhashbox, fmt);
+	memset(fmt, 0, 4);
 
 	n = strlen(output); /* no utf8 there... */
 	if (n != default_password_length) {
@@ -125,8 +119,7 @@ static void process_entries(void)
 	set_output_label_size(n);
 	fl_set_object_label(outbox, !*output ? output+1 : output);
 
-	memset(mhash, 0, sizeof(mhash));
-	memset(cpmaster, 0, sizeof(cpmaster));
+	memset(password, 0, sizeof(password));
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
 	if (!is_dupid(d[1])) {
