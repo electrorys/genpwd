@@ -31,16 +31,18 @@ struct malloc_cell {
 static void *genpwd_zalloc(size_t sz)
 {
 	void *p = malloc(sz);
-	if (p) memset(p, 0, sz);
+	if (!p) xerror("Out of memory!");
+	memset(p, 0, sz);
 	return p;
 }
 
 void genpwd_free(void *p)
 {
-	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+	struct malloc_cell *mc;
 
 	if (!p) return;
 
+	mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
 	if (mc->size) {
 		memset(mc->data, 0, mc->size);
 		mc->size = 0;
