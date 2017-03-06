@@ -15,6 +15,13 @@
 #define SMKPWD_OUTPUT_MAX _istr(MKPWD_OUTPUT_MAX)
 #define SMKPWD_ROUNDS_MAX _istr(MKPWD_ROUNDS_MAX)
 
+static char master[256] = {0}, name[256] = {0};
+static const char *d[] = {master, name, NULL, NULL};
+static char *pwdout = NULL;
+static int format_option = 0;
+static char keyfile[1024] = {0};
+static char data[256] = {0};
+
 static char *progname = NULL;
 
 static char *stoi;
@@ -25,7 +32,6 @@ static void usage(void)
 {
 	printf("usage: %s [-rODX8946mUN] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 	       	" [-s/k filename/-]\n\n", progname);
-	printf("  -r: repeat mode\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -107,26 +113,14 @@ int main(int argc, char **argv)
 {
 	progname = basename(argv[0]);
 
-	char master[256] = {0}, name[256] = {0};
-	const char *d[] = {master, name, NULL, NULL};
-	char *pwdout = NULL;
-
-	int format_option = 0;
-	int repeat = 0;
-	char keyfile[1024] = {0};
-	char data[256] = {0};
-
 	int c = 0;
 
 	if (!selftest())
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:ro:l:ODX89s:Nk:4::6::m::U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89s:Nk:4::6::m::U")) != -1) {
 		switch (c) {
-			case 'r':
-				repeat = 1;
-				break;
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
 				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
@@ -196,19 +190,11 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-_again:
 	getpasswd(master, "Enter master:", sizeof(master)-1);
-	if (repeat) {
-		char rep[sizeof(master)] = {0};
-		getpasswd(rep, "Repeat master:", sizeof(rep)-1);
-		if (strncmp(master, rep, sizeof(master)-1)) {
-			fprintf(stderr, "Master passwords don't match\n");
-			goto _again;
-		}
-		memset(rep, 0, sizeof(rep));
-	}
-	if (!name[0])
-		getstring(name, "Enter name:", sizeof(name)-1);
+	pwdout = mkpwd_hint(master, strlen(master));
+	printf("Password hint: %s\n", pwdout);
+	memset(pwdout, 0, 4);
+	getstring(name, "Enter name:", sizeof(name)-1);
 
 	loadids(NULL);
 	if (!is_dupid(name)) {
