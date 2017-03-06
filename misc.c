@@ -115,6 +115,8 @@ int is_dupid(const char *id)
 static void addid_init(const char *id, char *initid)
 {
 	size_t n;
+	char *old;
+	int x;
 
 	if ((id && iscomment(id)) || (initid && iscomment(initid))) return;
 
@@ -123,8 +125,15 @@ static void addid_init(const char *id, char *initid)
 
 	if (!initid) {
 		n = strlen(id);
+		old = data;
 		data = realloc(data, dsz+n+1);
 		if (!data) to_saveids(-1);
+		if (data != old) {
+			for (x = 0; x < nids; x++) {
+				if (*(ids+x))
+					*(ids+x) -= (old-data);
+			}
+		}
 		memset(data+dsz, 0, n+1);
 		strncpy(data+dsz, id, n);
 		*(ids+nids) = data+dsz;
