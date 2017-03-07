@@ -78,7 +78,7 @@ void *genpwd_realloc(void *p, size_t newsz)
 		void *newdata = genpwd_malloc(newsz);
 
 		if (!newdata) return NULL;
-		memcpy(newdata, p, newsz);
+		memcpy(newdata, p, mc->size);
 		genpwd_free(p);
 
 		return newdata;
