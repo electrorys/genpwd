@@ -26,7 +26,9 @@ static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbu
 #include "icon.xpm"
 
 static int format_option;
+static int do_not_show;
 static char data[1024];
+static char shadowed[MKPWD_OUTPUT_MAX];
 
 static char *progname;
 static char newtitle[64];
@@ -37,8 +39,9 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-ODX8946mUNi] [-n PASSES] [-o OFFSET]"
+	printf("usage: %s [-xODX8946mUNi] [-n PASSES] [-o OFFSET]"
 	       	" [-l PASSLEN] [-s/t filename/-]\n\n", progname);
+	printf("  -x: do not show password in output box. 'Copy' button will work.\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -116,11 +119,20 @@ static void process_entries(void)
 	n = strlen(output); /* no utf8 there... */
 	if (n != default_password_length && format_option <= 5) {
 		memset(output, 0, MKPWD_OUTPUT_MAX);
-		strcpy(output+1, "INVALID");
+		strcpy(output+1, "(INVALID)");
+		n = sizeof("(INVALID)")-1;
 	}
 
-	set_output_label_size(n);
-	fl_set_object_label(outbox, !*output ? output+1 : output);
+	if (do_not_show && *output) {
+		memset(shadowed, 0, sizeof(shadowed));
+		set_output_label_size(sizeof("(HIDDEN)")-1);
+		fl_set_object_label(outbox, "(HIDDEN)");
+		strncpy(shadowed, output, n);
+	}
+	else {
+		set_output_label_size(n);
+		fl_set_object_label(outbox, !*output ? output+1 : output);
+	}
 
 	memset(password, 0, sizeof(password));
 	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
@@ -143,7 +155,7 @@ static void process_entries(void)
 
 static void copyclipboard(void)
 {
-	const char *data = fl_get_object_label(outbox);
+	const char *data = shadowed[0] ? shadowed : fl_get_object_label(outbox);
 	long len = (long)strlen(data);
 
 	fl_stuff_clipboard(outbox, 0, data, len, NULL);
@@ -217,7 +229,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:4::6::m::UN")) != -1) {
+	while ((c = getopt(argc, argv, "xn:o:l:ODX89is:t:4::6::m::UN")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -283,6 +295,9 @@ int main(int argc, char **argv)
 				break;
 			case 'i':
 				listids();
+				break;
+			case 'x':
+				do_not_show = 1;
 				break;
 			default:
 				usage();
@@ -371,6 +386,8 @@ int main(int argc, char **argv)
 	} while ((called = fl_do_forms()));
 
 	clearentries();
+	memset(data, 0, sizeof(data));
+	memset(shadowed, 0, sizeof(shadowed));
 
 	saveids();
 
