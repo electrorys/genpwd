@@ -308,9 +308,7 @@ int main(int argc, char **argv)
 	fl_set_object_return(idsbr, FL_RETURN_SELECTION);
 	fl_set_object_callback(idsbr, select_entry, 0);
 	fl_set_object_dblbuffer(idsbr, 1);
-	fl_freeze_form(form);
 	loadids(fill_list);
-	fl_unfreeze_form(form);
 	fl_set_browser_topline(idsbr, 1);
 
 	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, " -- ");
