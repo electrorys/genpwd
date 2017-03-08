@@ -238,7 +238,8 @@ int main(int argc, char **argv)
 
 		fwrite(pwdout, default_password_length, 1, f);
 		fclose(f);
-		memset(pwdout, 0, default_password_length); genpwd_free(pwdout);
+		memset(pwdout, 0, default_password_length);
+		genpwd_free(pwdout);
 	}
 
 	saveids();

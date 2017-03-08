@@ -43,6 +43,7 @@ void genpwd_free(void *p)
 	if (!p) return;
 
 	mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+	if (p != mc->data) xerror("Memory allocation bug!");
 	if (mc->size) {
 		memset(mc->data, 0, mc->size);
 		mc->size = 0;
