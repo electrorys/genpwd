@@ -1,11 +1,9 @@
-/* change salt to get another unique profile */
-const unsigned char salt[] = {0x00, 0x00};
+const unsigned char salt[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
 
-/* selftest data for current salt */
 #ifdef _SELFTEST_CURRENT
-const char testmaster[] = "x";
-const char testname[] = "x";
-const char testxpwd[] = "123";
+const char testmaster[] = "V8UlNKHXqye7Xgq";
+const char testname[] = "genpwd password demo";
+const char testxpwd[] = "6eNuk423uPKSYBG";
 #endif
 
 int default_password_length = 15;
