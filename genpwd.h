@@ -52,6 +52,7 @@ int delid(const char *id);
 int is_dupid(const char *id);
 void addid(const char *id);
 void loadids(ids_populate_t idpfn);
+void listids(void);
 void to_saveids(int x);
 void saveids(void);
 

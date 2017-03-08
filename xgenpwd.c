@@ -37,7 +37,7 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-ODX8946mUN] [-n PASSES] [-o OFFSET]"
+	printf("usage: %s [-ODX8946mUNi] [-n PASSES] [-o OFFSET]"
 	       	" [-l PASSLEN] [-s filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
@@ -51,6 +51,7 @@ static void usage(void)
 	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
 	printf("  -U: output a UUID\n");
 	printf("  -N: do not save ID data typed in Name field\n");
+	printf("  -i: list identifiers from .genpwd.ids\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89s:4::6::m::UN")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89is:4::6::m::UN")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -271,6 +272,9 @@ int main(int argc, char **argv)
 				break;
 			case 'N':
 				to_saveids(-1);
+				break;
+			case 'i':
+				listids();
 				break;
 			default:
 				usage();

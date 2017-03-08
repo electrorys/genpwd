@@ -379,6 +379,22 @@ err:	fclose(f);
 	return;
 }
 
+void listids(void)
+{
+	int x;
+
+	loadids(NULL);
+	to_saveids(-1);
+
+	if (!ids || !nids) printf("No ids found.\n");
+
+	for (x = 0; x < nids; x++) {
+		if (*(ids+x)) printf("%s\n", *(ids+x));
+	}
+
+	exit(0);
+}
+
 void saveids(void)
 {
 	char path[PATH_MAX];
