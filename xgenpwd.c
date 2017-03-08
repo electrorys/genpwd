@@ -79,9 +79,9 @@ static void set_output_label_size(int output_passwd_length)
 {
 	int lsize;
 
-	if (output_passwd_length < 15) lsize = FL_MEDIUM_SIZE;
-	else if (output_passwd_length < 30) lsize = FL_NORMAL_SIZE;
-	else if (output_passwd_length < 37) lsize = FL_SMALL_SIZE;
+	if (output_passwd_length <= 18) lsize = FL_MEDIUM_SIZE;
+	else if (output_passwd_length <= 25) lsize = FL_NORMAL_SIZE;
+	else if (output_passwd_length <= 32) lsize = FL_SMALL_SIZE;
 	else lsize = FL_TINY_SIZE;
 
 	fl_set_object_lsize(outbox, lsize);
@@ -312,6 +312,7 @@ int main(int argc, char **argv)
 	fl_set_browser_topline(idsbr, 1);
 
 	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, " -- ");
+	fl_set_object_lstyle(outbox, FL_FIXED_STYLE|FL_BOLD_STYLE);
 
 	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 325, 270, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
