@@ -1,20 +1,170 @@
-genpwd - a password generator
+WHAT IS GENPWD?
 
-takes input in form of master password, a some unique identifier, and some local tweaks like
-password length adjust and offset from which cut it off.
+genpwd is simple password manager. It turns a memorable passwords and
+strings into unpredictable mess of random, salted with user preference.
 
-Output forms:
+genpwd, unlike usual crypto password managers does not store your _encrypted_
+passwords, not in plain nor in encrypted form, on long term storage media.
+Instead, it provides a way to recover passwords through hashing your input data.
 
-* [a-zA-Z0-9]
-* [0-9]
-* [0-7]
-* [0-f]
-* base85
-* base95 (broken in sense of reverse decoding, but all ASCII printable)
-* ipv4/ipv6/mac address
-* UUID
-* output binary file of given length
+HOW IT WORKS?
 
-The program uses Skein1024 as it's internal engine, defaults are tweakable in defs.h
+genpwd takes your input such as your master password and hint string, appends
+them with your personalised salt preconfigured at compile time and passes
+the result soup through Skein hash function.
 
-A XForms version of this program is included.
+- Skein hash function has a property to take arbitrary length input of unique
+data and produce a 128 byte output, unique to the data which it was fed with.
+- Skein hash function will produce same 128 bytes for same data it was fed with.
+- Skein hash function works as a PRNG (Pseudo Random Number Generator): when
+fed with predictable data it shakes it to a state of unpredictable, almost
+random data which is best source to generate a strong password.
+
+This property of hash functions in general is used within the program:
+It takes your data, passes them through Skein and converts random result into base64.
+
+Base64 is binary to ASCII text encoding. Because input is almost random, output
+of base64 will have same property, but represented in plain ASCII.
+
+Generated string from whole 128 bytes of random data is too large for user
+which wants, for example, only password of 15 characters. So, additionally,
+an offset setting is applied: a substring, starting at given offset
+is cut off main string, with length user wants to.
+
+That's how genpwd works.
+
+PLAIN TEXT EXAMPLE
+
+Suppose user fed Skein engine with such data of it's own:
+
+Master: "Your Bunny Wrote"[16]
+Name: "email:user@example.com"[22]
+Salt: {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}[8]
+
+genpwd concatenates all three into one:
+
+{Your Bunny Wrote{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}email:user@example.com}[46]
+
+genpwd passes this buffer of 46 bytes to Skein hash function.
+
+Suppose genpwd generated a string from 128 bytes of random data
+from user provided buffer of 46 bytes earlier:
+
+jhYrBg1lm0V31ZQMp8W0FrsW3IrunlL2mpkOfJVliGilLRvwWFtxZQMAAjWj8kaDByjtMBQy1IS1qQIv2H4uuerWzEegu8Io0XaoYmj2oRV7boH1NUe8zr6q2WuSH45ljfFiqMc8UzXBRm5OhDIANqlmggnBBGpFv3zqw
+
+User has configured genpwd to give output of 15 characters,
+starting at offset of 11 bytes:
+
+jhYrBg1lm0V [31ZQMp8W0FrsW3I] runlL2mpkOfJVliGilLRvwWFtxZQMAAjWj8kaDByjtMBQy1IS1qQIv2H4uuerWzEegu8Io0XaoYmj2oRV7boH1NUe8zr6q2WuSH45ljfFiqMc8UzXBRm5OhDIANqlmggnBBGpFv3zqw
+
+Result random password: 31ZQMp8W0FrsW3I
+
+HOW TO START?
+
+To use genpwd, you need to remember one thing: your master password (or many of them).
+It's not required to provide a random good master password, although it's recommended.
+
+You can use anything you want there. Program does not restricts you from using
+multiple master passwords at once, getting more random passwords from this.
+
+The only one thing you need to know: You ABSOLUTELY RESPONSIBLE for remembering
+the master password(s). If you will loose it, there is NO OTHER WAY TO RECOVER!!
+
+genpwd does not store your password somewhere. There is nothing to brute force.
+It just _generates_ passwords based on your input. If provided data is valid,
+then genpwd will give you a password which will work. Otherwise, sorry.
+
+User should treat salt data, offset, length, nr. of passes and tweak as a
+potentially public accessible information. User should rely only on master
+password(s), and NEVER disclose them to anyone, NEVER write them on paper
+or store them somewhere in computer in plain form.
+User should treat master password(s) as a private key.
+
+PASSWORD HINT
+
+You may notice that genpwd gives something like "Password hint" string, then
+four hex digits appear. There is also no repeat mode, so you cannot input
+a second password to verify that your input is correct. This is normal.
+
+Password hint is a very small hash of your password, enough for you to
+quickly verify it's validity, but this hash is not usable to brute
+force your password from it because there are only 16 bits of information.
+
+When choosing a master password, run the program multiple times.
+Input your password and remember provided password hint digits.
+Run 5 times or more and input same password again and again.
+If password hint is same all times, then remember this number.
+It will help you in future to quickly verify your master password.
+
+NAME STRINGS
+
+The Name string is a string which identifies the object you're protecting with
+the given password. Any format is accepted there, and it's a user choice
+to establish formats there, or run without formats at all.
+
+For example, user wants to set password for his email account.
+Then he uses his email address as a Name string. Such simple.
+
+More complicated schemes can lead to more complicated choices there.
+
+DATA STORAGE
+
+Since xgenpwd, genpwd and xgenpwd put all name strings which user did generated
+passwords with onto disk in encrypted file named ".genpwd.ids", which resides
+in his home directory.
+This file is encrypted with tfcrypt compatible encryption mode, using user's
+salt setting and predefined tweak as a keys. So, if someone has a compiled binary
+with user settings, it's possible to decrypt this file.
+
+Not so scary! Without master password(s), it's impossible to obtain your passwords
+from these strings. They _may_ lead to some guesses about where you have encrypted
+passwords, but, apart from these strings no other information is stored, such
+as custom password length, offset or master password used to make the password.
+
+Without copy of binary, it's impossible to decrypt this file, if genpwd is
+configured properly.
+
+SECURITY
+
+genpwd, if configured properly, will offer at least sha512 crypt(3) security
+for your generated passwords, and even more. Skein is not heavy hash function,
+but reapplied more than one time means that to brute force, attacker must
+reapply same levels of hashing to go through to guess your master password.
+
+Since a substring is taken out from result string, brute forcing is more
+complicated. Brute forcing a master password by only generated password
+is almost impossible because of lack of context where this password is generated.
+
+If a tweak information is revealed (salt, offset and length, number of passes),
+it's still hard to brute force master password since attacker is forced to go
+through complete number of passes.
+
+The only things become disastrous is only when a master password,
+Your Private Key, is revealed. Then attacker can reveal your protected passwords,
+if he knows your Name strings. Without knowing them he will be forced to brute force
+again, but Name strings are much likely to become public rather than Master password.
+
+genpwd provides plausible deniability for your generated passwords. When no one
+knows how you generated this password, it's very hard to guess that some crypto
+program did that for you. It is same password as if it was taken from /dev/urandom.
+
+TRICKS
+
+If you concerned about binary leakage to someone, then either:
+- Keep it safe from other eyes (put it into your $HOME/bin)
+- Or run it with different settings.
+There are command line options -n, -o, -l, -s, which configure internal state including
+salt which can be loaded from file or stdin.
+Then you must keep your salt file and settings data private too.
+
+ABOUT
+
+genpwd is long story. It began as a general purpose hashed password generator.
+There were three versions of this program:
+- A stupid PHP script one,
+- A more improved sha256 one, but it depended on OpenSSL,
+- And established Skein one, the current.
+
+At least idea is not fresh, and it's there since 2009.
+
+genpwd and xgenpwd are by Lynx, Mar2017.
