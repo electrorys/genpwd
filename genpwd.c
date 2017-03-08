@@ -31,7 +31,7 @@ size_t _slen = sizeof(salt);
 static void usage(void)
 {
 	printf("usage: %s [-rODX8946mUNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-	       	" [-s/k filename/-]\n\n", progname);
+	       	" [-s/k/t filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -51,6 +51,8 @@ static void usage(void)
 	       	" 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename"
 	       	" or stdin (if '-')\n");
+	printf("  -t filename: load threefish tweak binary from filename"
+		" or stdin (if '-')\n");
 	printf("  -k filename: generate a keyfile instead of password\n\n");
 	exit(1);
 }
@@ -120,7 +122,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:Nk:4::6::m::U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:Nk:4::6::m::U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -157,6 +159,12 @@ int main(int argc, char **argv)
 				break;
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
+				break;
+			case 't':
+				loadsalt(optarg, &_tweak, NULL);
+				/* Looks HACKY but acceptable */
+				if (genpwd_szalloc(_tweak) < sizeof(tweak))
+					xerror("Tweak must be at least 16 bytes long!");
 				break;
 			case 'N':
 				to_saveids(-1);

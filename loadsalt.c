@@ -15,7 +15,7 @@ void loadsalt(const char *fname, const unsigned char **P, size_t *B)
 	if (!f) { perror(fname); exit(2); }
 
 _noopen:
-	p = genpwd_malloc(0);
+	p = genpwd_malloc(B ? *B : 1);
 	if (!p) xerror("Can't get memory for salt");
 
 	b = 0;
@@ -28,6 +28,8 @@ _noopen:
 	}
 
 	fclose(f);
+	memset(buf, 0, sizeof(buf));
 
-	*B = b; *P = p;
+	if (B) *B = b;
+	*P = p;
 }

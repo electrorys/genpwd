@@ -33,6 +33,7 @@ void genpwd_free(void *p);
 void *genpwd_malloc(size_t sz);
 void *genpwd_calloc(size_t nm, size_t sz);
 void *genpwd_realloc(void *p, size_t newsz);
+size_t genpwd_szalloc(const void *p);
 
 void xerror(const char *reason);
 void daemonise(void);
@@ -43,6 +44,8 @@ typedef void (*ids_populate_t)(const char *str);
 
 extern const unsigned char *_salt;
 extern size_t _slen;
+
+extern const unsigned char *_tweak;
 
 void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 			unsigned int bits, unsigned int passes);

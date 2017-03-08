@@ -23,6 +23,8 @@ static size_t dsz = 0;
 const unsigned char *_salt = salt;
 extern size_t _slen;
 
+const unsigned char *_tweak = tweak; /* fixed size */
+
 struct malloc_cell {
 	size_t size;
 	void *data;
@@ -85,6 +87,14 @@ void *genpwd_realloc(void *p, size_t newsz)
 		return newdata;
 	}
 	return p;
+}
+
+size_t genpwd_szalloc(const void *p)
+{
+	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
+	if (!p) return 0;
+	if (p != mc->data) xerror("Memory allocation bug!");
+	return mc->size;
 }
 
 void xerror(const char *reason)
@@ -248,7 +258,7 @@ static void prepare_context(tf1024_ctx *tctx)
 	if (mkpwd_passes_number > 1)
 		sk1024_loop(key, TF_KEY_SIZE, key, 1024, mkpwd_passes_number);
 	tf1024_init(tctx);
-	tf1024_set_tweak(tctx, tweak);
+	tf1024_set_tweak(tctx, _tweak);
 	tf1024_set_key(tctx, key, TF_KEY_SIZE);
 	sk1024(key, TF_KEY_SIZE, ctr, 1024);
 	tf1024_start_counter(tctx, ctr);
