@@ -286,7 +286,7 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 385);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 380);
 
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
@@ -322,13 +322,13 @@ int main(int argc, char **argv)
 	fl_set_counter_min_repeat(pwlcnt, 25);
 	fl_set_object_callback(pwlcnt, set_password_length, 0);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 350, 60, 30, "Make");
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 350, 60, 25, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 350, 60, 30, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 350, 60, 25, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 350, 60, 30, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 350, 60, 25, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 350, 60, 30, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 350, 60, 25, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
