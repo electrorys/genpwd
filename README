@@ -90,6 +90,8 @@ Password hint is a very small hash of your password, enough for you to
 quickly verify it's validity, but this hash is not usable to brute
 force your password from it because there are only 16 bits of information.
 
+This hash is personalised by your salt setting.
+
 When choosing a master password, run the program multiple times.
 Input your password and remember provided password hint digits.
 Run 5 times or more and input same password again and again.

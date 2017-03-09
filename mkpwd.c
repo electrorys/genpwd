@@ -14,7 +14,7 @@ static char *stoi;
 /* Imported from rndaddr.c */
 static void mkipv4(char *out, void *rnd, size_t rlen, const char *maskaddr)
 {
-	unsigned char *urnd = rnd;
+	unsigned char *urnd = (unsigned char *)rnd;
 	unsigned char addr4[4] = {0}; int prefix = 0; unsigned char c = 0;
 	char tmpaddr[INET_ADDRSTRLEN] = {0};
 	int i;
@@ -57,7 +57,7 @@ _fail:
 
 static void mkipv6(char *out, void *rnd, size_t rlen, const char *maskaddr)
 {
-	unsigned char *urnd = rnd;
+	unsigned char *urnd = (unsigned char *)rnd;
 	unsigned char addr6[16] = {0}; int prefix = 0; unsigned char c = 0;
 	char tmpaddr[INET6_ADDRSTRLEN] = {0};
 	int i;
@@ -101,7 +101,7 @@ _fail:
 #define MAC_ADDRSTRLEN 18
 static void mkmac(char *out, void *rnd, size_t rlen, const char *maskaddr)
 {
-	unsigned char *urnd = rnd;
+	unsigned char *urnd = (unsigned char *)rnd;
 	unsigned char mac[6] = {0}; int prefix = 0; unsigned char c = 0;
 	char tmpaddr[MAC_ADDRSTRLEN] = {0};
 	char *s = NULL; const char *d = NULL;
@@ -154,7 +154,7 @@ _fail:
 
 static void mkuuid(char *out, void *rnd, size_t rlen)
 {
-	unsigned char *urnd = rnd;
+	unsigned char *urnd = (unsigned char *)rnd;
 	if (rlen < 16) return;
 
 	snprintf(out, 37, "%02hhx%02hhx%02hhx%02hhx"
@@ -179,10 +179,12 @@ static void mkuuid(char *out, void *rnd, size_t rlen)
 char *mkpwd(const void *salt, size_t slen, const char **data)
 {
 	size_t pwdl = 0;
-	sk1024_ctx ctx; memset(&ctx, 0, sizeof(sk1024_ctx));
+	sk1024_ctx ctx;
 	unsigned char tmp[128];
 	int i;
 	static char ret[MKPWD_OUTPUT_MAX]; memset(ret, 0, sizeof(ret));
+
+	memset(&ctx, 0, sizeof(sk1024_ctx));
 
 	for (i = 0; data[i] && i < _mkpwd_data_max; i++)
 		pwdl += strnlen(data[i], MKPWD_INPUT_MAX);
@@ -277,9 +279,11 @@ _fastret:
 void *mkpwbuf(const void *salt, size_t slen, const char **data)
 {
 	size_t pwdl = 0;
-	sk1024_ctx ctx; memset(&ctx, 0, sizeof(sk1024_ctx));
+	sk1024_ctx ctx;
 	int i;
 	static char *ret;
+
+	memset(&ctx, 0, sizeof(sk1024_ctx));
 
 	if (!mkpwd_password_length || mkpwd_password_length >= 0x10000)
 		return "\0Requested output size is bigger than 64K";
@@ -313,15 +317,24 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 
 #undef _mkpwd_data_max
 
-char *mkpwd_hint(const char *pw, size_t n)
+char *mkpwd_hint(const void *salt, size_t slen, const char *pw)
 {
 	static char mhash[TF_BLOCK_SIZE];
+	sk1024_ctx ctx;
 	char *ret;
 
+	memset(&ctx, 0, sizeof(sk1024_ctx));
 	memset(mhash, 0, sizeof(mhash));
-	sk1024(pw, n, mhash, 16);
+
+	sk1024_init(&ctx, 16);
+	sk1024_update(&ctx, pw, strnlen(pw, MKPWD_INPUT_MAX));
+	sk1024_update(&ctx, salt, slen);
+	sk1024_final(&ctx, mhash);
+
 	ret = mhash + (sizeof(mhash)/2);
 	snprintf(ret, (sizeof(mhash)/2), "%02hx%02hx", (uint8_t)mhash[0], (uint8_t)mhash[1]);
+
+	memset(&ctx, 0, sizeof(sk1024_ctx));
 	memset(mhash, 0, (sizeof(mhash)/2));
 
 	return ret;

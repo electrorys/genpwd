@@ -112,7 +112,7 @@ static void process_entries(void)
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
 	output = mkpwd(_salt, _slen, d);
 
-	fmt = mkpwd_hint(password, pwl);
+	fmt = mkpwd_hint(_salt, _slen, password);
 	fl_set_object_label(mhashbox, fmt);
 	memset(fmt, 0, 4);
 
