@@ -207,7 +207,22 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 			sk1024(tmp, sizeof(tmp), tmp, 1024);
 
 	if (mkpwd_output_format == 0) {
+		unsigned char b64test[MKPWD_OUTPUT_MAX];
+
 		b64_encode(ret, tmp, sizeof(tmp));
+
+		if (!getenv("_GENPWD_OLDB64")) {
+			memset(b64test, 0, sizeof(b64test));
+			base64_encode((char *)b64test, (char *)tmp, sizeof(tmp));
+			if (strncmp(ret, (char *)b64test, MKPWD_OUTPUT_MAX) != 0) {
+				memset(b64test, 0, sizeof(b64test));
+				memset(ret, 0, sizeof(ret));
+				memset(tmp, 0, sizeof(tmp));
+				return "\0New base64 failed";
+			}
+		}
+		memset(b64test, 0, sizeof(b64test));
+
 		stripchr(ret, "./+=");
 	}
 	else if (mkpwd_output_format == 4)

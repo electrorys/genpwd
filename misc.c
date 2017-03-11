@@ -446,3 +446,25 @@ out:	if (ids) {
 	}
 	if (f) fclose(f);
 }
+
+void stripchr(char *s, const char *rem)
+{
+	const char *rst = rem;
+	char *d = s;
+	int add = 0;
+
+	while (*s) {
+		while (*rem) {
+			if (*s != *rem) add = 1;
+			else { add = 0; break; }
+			rem++;
+		}
+
+		if (add) *d++ = *s;
+
+		s++;
+		rem = rst;
+	}
+
+	memset(d, 0, s-d);
+}
