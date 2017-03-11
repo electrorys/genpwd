@@ -20,7 +20,7 @@ static const char *d[] = {master, name, NULL, NULL};
 static char *pwdout = NULL;
 static int format_option = 0;
 static char keyfile[1024] = {0};
-static char data[256] = {0};
+static char data[128] = {0};
 
 static char *progname = NULL;
 
@@ -30,18 +30,17 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-rODX8946mUNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	printf("usage: %s [-rODX8946mdUNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 	       	" [-s/k/t filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
 	printf("  -8: output base85 password\n");
 	printf("  -9: output base95 password\n");
-	printf("  -4[ADDR/PFX]: output an ipv4 address*\n");
-	printf("  -6[ADDR/PFX]: output an ipv6 address*\n");
-	printf("  -m[ADDR.PFX]: output a mac address*\n");
-	printf("    * - ADDR/PFX: example: 127.16.0.0/16 (generates local address)\n");
-	printf("    * - ADDR.PFX: example: 04:5e:30:23:00:00.32 \n");
+	printf("  -4: output an ipv4 address\n");
+	printf("  -6: output an ipv6 address\n");
+	printf("  -m: output a mac address\n");
+	printf("  -d data: provide optional data for -46m options\n");
 	printf("  -U: output a UUID\n");
 	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -i: list identifiers from .genpwd.ids\n");
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:Nk:4::6::m::U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:Nk:46md:U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -177,18 +176,19 @@ int main(int argc, char **argv)
 				break;
 			case '4':
 				format_option = 0x1004;
-				if (optarg) strncpy(data, optarg, sizeof(data)-1);
-				else strcpy(data, "0.0.0.0/0");
+				strcpy(data, "0.0.0.0/0");
 				break;
 			case '6':
 				format_option = 0x1006;
-				if (optarg) strncpy(data, optarg, sizeof(data)-1);
-				else strcpy(data, "::/0");
+				strcpy(data, "::/0");
 				break;
 			case 'm':
 				format_option = 0x1001;
-				if (optarg) strncpy(data, optarg, sizeof(data)-1);
-				else strcpy(data, "0:0:0:0:0:0.0");
+				strcpy(data, "0:0:0:0:0:0.0");
+				break;
+			case 'd':
+				memset(data, 0, sizeof(data));
+				strncpy(data, optarg, sizeof(data)-1);
 				break;
 			case 'U':
 				format_option = 0xff;
