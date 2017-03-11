@@ -117,7 +117,7 @@ static void process_entries(void)
 	memset(fmt, 0, 4);
 
 	n = strlen(output); /* no utf8 there... */
-	if (n != default_password_length && format_option <= 5) {
+	if (n && n != default_password_length && format_option <= 5) {
 		memset(output, 0, MKPWD_OUTPUT_MAX);
 		strcpy(output+1, "(INVALID)");
 		n = sizeof("(INVALID)")-1;
@@ -135,7 +135,7 @@ static void process_entries(void)
 	}
 
 	memset(password, 0, sizeof(password));
-	memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
+	if (*output) memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
 	if (!is_dupid(d[1])) {
 		addid(d[1]);
