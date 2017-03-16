@@ -22,6 +22,9 @@ static FL_FORM *form;
 static Window win;
 static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
+static FL_OBJECT *search, *srchup, *srchdown;
+
+static FL_COLOR srchcol1, srchcol2;
 
 #include "icon.xpm"
 
@@ -70,9 +73,90 @@ static void fill_list(const char *str)
 	fl_addto_browser(idsbr, str);
 }
 
+static void clearinput(FL_OBJECT *input);
+
 static void select_entry(FL_OBJECT *brobj, long arg FL_UNUSED_ARG)
 {
-	fl_set_input(name, fl_get_browser_line(brobj, fl_get_browser(brobj)));
+	const char *sel = fl_get_browser_line(brobj, fl_get_browser(brobj));
+	const char *srch = fl_get_input(search);
+
+	fl_set_input(name, sel);
+	if (!arg) {
+		clearinput(search);
+		fl_set_object_color(search, srchcol1, srchcol2);
+	}
+	if (!arg && srch && *srch && strstr(sel, srch))
+		fl_set_object_color(search, srchcol1, FL_LIGHTGREEN);
+}
+
+/* TODO: optimise these three somehow... */
+static void searchitem(void)
+{
+	const char *what = fl_get_input(search);
+	const char *srch;
+	int x;
+
+	if (!what || !*what) goto out;
+
+	for (x = 1, srch = NULL; ; x++) {
+		srch = fl_get_browser_line(idsbr, x);
+		if (!srch) goto out;
+		if (strstr(srch, what)) {
+			fl_select_browser_line(idsbr, x);
+			fl_set_browser_topline(idsbr, x);
+			select_entry(idsbr, 1/* true: do not do additional color work */);
+			fl_set_object_color(search, srchcol1, FL_LIGHTGREEN);
+			return;
+		}
+	}
+
+out:	fl_deselect_browser(idsbr);
+	clearinput(name);
+	fl_set_object_color(search, srchcol1, (what && !*what) ? srchcol2 : FL_INDIANRED);
+}
+
+static void searchitemup(void)
+{
+	const char *what = fl_get_input(search);
+	const char *srch;
+	int idx = fl_get_browser(idsbr);
+	int x;
+
+	if (!what || !*what || !idx) return;
+
+	for (x = idx-1, srch = NULL; x >= 1; x--) {
+		srch = fl_get_browser_line(idsbr, x);
+		if (!srch) return;
+		if (strstr(srch, what)) {
+			fl_select_browser_line(idsbr, x);
+			fl_set_browser_topline(idsbr, x);
+			select_entry(idsbr, 1);
+			fl_set_object_color(search, srchcol1, FL_LIGHTGREEN);
+			return;
+		}
+	}
+}
+
+static void searchitemdown(void)
+{
+	const char *what = fl_get_input(search);
+	const char *srch;
+	int idx = fl_get_browser(idsbr);
+	int x;
+
+	if (!what || !*what || !idx) return;
+
+	for (x = idx+1, srch = NULL; ; x++) {
+		srch = fl_get_browser_line(idsbr, x);
+		if (!srch) return;
+		if (strstr(srch, what)) {
+			fl_select_browser_line(idsbr, x);
+			fl_set_browser_topline(idsbr, x);
+			select_entry(idsbr, 1);
+			fl_set_object_color(search, srchcol1, FL_LIGHTGREEN);
+			return;
+		}
+	}
 }
 
 static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
@@ -196,6 +280,9 @@ static void clearentries(void)
 	safe_zero_object_label(mhashbox);
 	fl_set_object_label(mhashbox, " -- ");
 
+	clearinput(search);
+	fl_set_object_color(search, srchcol1, srchcol2);
+
 	fl_wintitle(win, progname);
 	fl_set_focus_object(form, master);
 	fl_deselect_browser(idsbr);
@@ -313,7 +400,7 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 380);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 405);
 
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
@@ -338,10 +425,18 @@ int main(int argc, char **argv)
 	loadids(fill_list);
 	fl_set_browser_topline(idsbr, 1);
 
-	outbox = fl_add_box(FL_SHADOW_BOX, 5, 270, 270, 50, " -- ");
+	search = fl_add_input(FL_NORMAL_INPUT, 5, 270, 220, 20, NULL);
+	fl_set_object_return(search, FL_RETURN_CHANGED);
+	fl_get_object_color(search, &srchcol1, &srchcol2);
+	srchup = fl_add_button(FL_NORMAL_BUTTON, 230, 270, 20, 20, "@8>");
+	fl_set_object_shortcut(srchup, "^P", 0);
+	srchdown = fl_add_button(FL_NORMAL_BUTTON, 255, 270, 20, 20, "@2>");
+	fl_set_object_shortcut(srchdown, "^N", 0);
+
+	outbox = fl_add_box(FL_SHADOW_BOX, 5, 295, 270, 50, " -- ");
 	fl_set_object_lstyle(outbox, FL_FIXED_STYLE|FL_BOLD_STYLE);
 
-	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 325, 270, 20, NULL);
+	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 350, 270, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
 	fl_set_counter_value(pwlcnt, (double)default_password_length);
 	fl_set_counter_bounds(pwlcnt, (double)0, (double)MKPWD_OUTPUT_MAX);
@@ -350,13 +445,13 @@ int main(int argc, char **argv)
 	fl_set_counter_min_repeat(pwlcnt, 25);
 	fl_set_object_callback(pwlcnt, set_password_length, 0);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 350, 60, 25, "Make");
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 375, 60, 25, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 350, 60, 25, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 375, 60, 25, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 350, 60, 25, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 375, 60, 25, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 350, 60, 25, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 375, 60, 25, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
@@ -382,6 +477,12 @@ int main(int argc, char **argv)
 		}
 		else if (called == nambut)
 			removeitem();
+		else if (called == search)
+			searchitem();
+		else if (called == srchup)
+			searchitemup();
+		else if (called == srchdown)
+			searchitemdown();
 		else if (called == quitbutton) break;
 	} while ((called = fl_do_forms()));
 
