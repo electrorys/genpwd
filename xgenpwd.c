@@ -296,7 +296,6 @@ static void removeitem(void)
 	int x = fl_get_browser(idsbr);
 	const char *line = fl_get_browser_line(idsbr, x);
 
-	clearinput(name);
 	if (!delid(line)) return;
 	fl_delete_browser_line(idsbr, x);
 	to_saveids(1);
@@ -476,11 +475,15 @@ int main(int argc, char **argv)
 		else if (called == masbut) {
 			clearinput(master);
 			fl_activate_object(master);
+			fl_set_focus_object(form, master);
 			safe_zero_object_label(mhashbox);
 			fl_set_object_label(mhashbox, " -- ");
 		}
-		else if (called == nambut)
+		else if (called == nambut) {
+			clearinput(name);
+			fl_set_focus_object(form, name);
 			removeitem();
+		}
 		else if (called == search)
 			searchitem();
 		else if (called == srchup)
