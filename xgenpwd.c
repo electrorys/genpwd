@@ -217,6 +217,8 @@ static void process_entries(void)
 		fl_set_object_label(outbox, !*output ? output+1 : output);
 	}
 
+	fl_deactivate_object(master);
+
 	memset(password, 0, sizeof(password));
 	if (*output) memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
 
@@ -273,6 +275,7 @@ static void safe_zero_object_label(FL_OBJECT *obj)
 static void clearentries(void)
 {
 	clearinput(master);
+	fl_activate_object(master);
 	clearinput(name);
 
 	safe_zero_object_label(outbox);
@@ -472,6 +475,7 @@ int main(int argc, char **argv)
 			clearentries();
 		else if (called == masbut) {
 			clearinput(master);
+			fl_activate_object(master);
 			safe_zero_object_label(mhashbox);
 			fl_set_object_label(mhashbox, " -- ");
 		}
