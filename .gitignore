@@ -3,6 +3,7 @@ _*
 *.o
 *.patch
 *.diff
+*.upx
 tags
 icon.h
 genpwd

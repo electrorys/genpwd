@@ -1,7 +1,9 @@
 override CFLAGS+=-Wall -DTF_FAST -D_XOPEN_SOURCE=700 -D_BSD_SOURCE -O2 -DDAEMONISE -D_SELFTEST_CURRENT
+UPX=upx
 
 XFORMS_CFLAGS:=-I/local/X11/include -I/local/include/freetype2
 XFORMS_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/local/X11/lib -lX11
+XFORMS_STATIC_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/local/X11/lib -lXft -lXpm -lX11 -lxcb -lfontconfig -lexpat -lXrender -lfreetype -lXau -lXdmcp -lbz2 -lz
 
 SRCS = $(wildcard *.c)
 GENPWD_OBJS = $(filter-out xgenpwd.o, $(SRCS:.c=.o))
@@ -19,8 +21,16 @@ xgenpwd.o: xgenpwd.c
 genpwd: $(GENPWD_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(GENPWD_OBJS) -o $@
 
+genpwd.upx: $(GENPWD_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -static -s $(GENPWD_OBJS) -o $@
+	$(UPX) --best $@
+
 xgenpwd: $(XGENPWD_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(XGENPWD_OBJS) -o $@ $(XFORMS_LDFLAGS)
 
+xgenpwd.upx: $(XGENPWD_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -static -s $(XGENPWD_OBJS) -o $@ $(XFORMS_STATIC_LDFLAGS)
+	$(UPX) --best $@
+
 clean:
-	rm -f genpwd xgenpwd *.o icon.h
+	rm -f genpwd xgenpwd *.upx *.o icon.h
