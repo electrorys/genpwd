@@ -225,10 +225,40 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 
 		stripchr(ret, "./+=");
 	}
-	else if (mkpwd_output_format == 4)
+	else if (mkpwd_output_format == 4) {
+		unsigned char b85test[MKPWD_OUTPUT_MAX];
+
 		hash85(ret, tmp, sizeof(tmp));
-	else if (mkpwd_output_format == 5)
+
+		if (!getenv("_GENPWD_OLDB85")) {
+			memset(b85test, 0, sizeof(b85test));
+			base85_encode((char *)b85test, tmp, sizeof(tmp));
+			if (strncmp(ret, (char *)b85test, MKPWD_OUTPUT_MAX) != 0) {
+				memset(b85test, 0, sizeof(b85test));
+				memset(ret, 0, sizeof(ret));
+				memset(tmp, 0, sizeof(tmp));
+				return "\0New base85 failed";
+			}
+		}
+		memset(b85test, 0, sizeof(b85test));
+	}
+	else if (mkpwd_output_format == 5) {
+		unsigned char b95test[MKPWD_OUTPUT_MAX];
+
 		hash95(ret, tmp, sizeof(tmp));
+
+		if (!getenv("_GENPWD_OLDB95")) {
+			memset(b95test, 0, sizeof(b95test));
+			base95_encode((char *)b95test, tmp, sizeof(tmp));
+			if (strncmp(ret, (char *)b95test, MKPWD_OUTPUT_MAX) != 0) {
+				memset(b95test, 0, sizeof(b95test));
+				memset(ret, 0, sizeof(ret));
+				memset(tmp, 0, sizeof(tmp));
+				return "\0New base95 failed";
+			}
+		}
+		memset(b95test, 0, sizeof(b95test));
+	}
 	else if (mkpwd_output_format == 0x1004) {
 		mkipv4(ret, tmp, sizeof(tmp), data[2]);
 		goto _fastret;

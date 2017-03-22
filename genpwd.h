@@ -29,6 +29,10 @@ size_t base64_encode(char *output, const char *input, size_t inputl);
 void b64_encode(char *dst, const unsigned char *src, size_t length);
 void stripchr(char *s, const char *rem);
 
+/* new base85 */
+void base85_encode(char *dst, const unsigned char *src, size_t count);
+void base95_encode(char *dst, const unsigned char *src, size_t count);
+/* old base85 */
 void hash85(char *dst, const unsigned char *src, size_t len);
 void hash95(char *dst, const unsigned char *src, size_t len);
 
