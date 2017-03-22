@@ -75,11 +75,9 @@ static void base95_init(void)
 
 /*
  * convert a list of 32-bit values into a base85 string.
- * if you wish to encode 8-bit values, load them into 32-bit values in Big Endian order
  * example:
  *   input: "Lion"
  *   ascii85: 9PJE_
- *   base85: !aflO
  */
 static int __base85_encode(char *out, size_t max, const uint32_t *data, size_t count)
 {
@@ -92,10 +90,12 @@ static int __base85_encode(char *out, size_t max, const uint32_t *data, size_t c
 		if (max < 1) return 0; /* failure */
 		n = *data++;
 		data_to_be32(&n, sizeof(uint32_t));
-		count--;
+		if (count >= sizeof(uint32_t))
+			count -= sizeof(uint32_t);
+		else count = 0;
 
 		if (n == 0) {
-			*out++ = '\0';
+			*out++ = '\0'; /* must be 'z', but there is NUL. */
 			max--;
 		}
 		else {
@@ -124,7 +124,9 @@ static int __base95_encode(char *out, size_t max, const uint32_t *data, size_t c
 		if (max < 1) return 0; /* failure */
 		n = *data++;
 		data_to_be32(&n, sizeof(uint32_t));
-		count--;
+		if (count >= sizeof(uint32_t))
+			count -= sizeof(uint32_t);
+		else count = 0;
 
 		if (n == 0) {
 			*out++ = '\0';
