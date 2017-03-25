@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 
 	getpasswd(master, "Enter master:", sizeof(master)-1);
 	pwdout = mkpwd_hint(_salt, _slen, master);
-	printf("Password hint: %s\n", pwdout);
+	fprintf(stderr, "Password hint: %s\n", pwdout);
 	memset(pwdout, 0, 4);
 	getstring(name, "Enter name:", sizeof(name)-1);
 
