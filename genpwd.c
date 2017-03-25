@@ -19,6 +19,7 @@ static char master[256] = {0}, name[256] = {0};
 static const char *d[] = {master, name, NULL, NULL};
 static char *pwdout = NULL;
 static int format_option = 0;
+static int no_newline = 0;
 static char keyfile[1024] = {0};
 static char data[128] = {0};
 
@@ -30,7 +31,7 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
-	printf("usage: %s [-rODX8946mdUNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	printf("usage: %s [-rODX8946mdULNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 	       	" [-s/k/t filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
@@ -42,6 +43,7 @@ static void usage(void)
 	printf("  -m: output a mac address\n");
 	printf("  -d data: provide optional data for -46m options\n");
 	printf("  -U: output a UUID\n");
+	printf("  -L: omit newline when printing password\n");
 	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -i: list identifiers from .genpwd.ids\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
@@ -121,7 +123,7 @@ int main(int argc, char **argv)
 		xerror("Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:Nk:46md:U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:LNk:46md:U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -164,6 +166,9 @@ int main(int argc, char **argv)
 				/* Looks HACKY but acceptable */
 				if (genpwd_szalloc(_tweak) < sizeof(tweak))
 					xerror("Tweak must be at least 16 bytes long!");
+				break;
+			case 'L':
+				no_newline = 1;
 				break;
 			case 'N':
 				to_saveids(-1);
@@ -224,7 +229,8 @@ int main(int argc, char **argv)
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(pwdout+1);
 	
-		printf("%s\n", pwdout);
+		no_newline ? printf("%s", pwdout) : printf("%s\n", pwdout);
+		fflush(stdout);
 		memset(pwdout, 0, MKPWD_OUTPUT_MAX); pwdout = NULL;
 	}
 	else {
