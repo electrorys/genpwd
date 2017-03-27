@@ -149,77 +149,10 @@ static int __base95_encode(char *out, size_t max, const uint32_t *data, size_t c
 
 void base85_encode(char *dst, const unsigned char *src, size_t count)
 {
-	(void)__base85_encode(dst, count * 2 > MKPWD_OUTPUT_MAX ? MKPWD_OUTPUT_MAX : count * 2, (const uint32_t *)src, count);
+	(void)__base85_encode(dst, ((count / 4) + count) + 1, (const uint32_t *)src, count);
 }
 
 void base95_encode(char *dst, const unsigned char *src, size_t count)
 {
-	(void)__base95_encode(dst, count * 2 > MKPWD_OUTPUT_MAX ? MKPWD_OUTPUT_MAX : count * 2, (const uint32_t *)src, count);
+	(void)__base95_encode(dst, ((count / 4) + count) + 1, (const uint32_t *)src, count);
 }
-
-/*
- * convert a base85 string into a list of 32-bit values
- * treats string as if it were padded with 0s
- */
-#if 0
-int base85_decode(uint32_t *out, size_t out_count, const char *in)
-{
-	unsigned in_count;
-	uint32_t n, k;
-
-	base85_init();
-
-	if (*in == 0) return 0; /* nothing to decode */
-	while (*in) {
-		if (out_count <= 0) return 0; /* failure - not enough space in destination */
-		n = 0;
-		/* 'z' is a special way to encode 4 bytes of 0s */
-		if (*in == 'z') {
-			in++;
-		}
-		else {
-			for (in_count=0, k=1; *in && in_count < BASE85_DIGITS; in_count++) {
-				signed d; /* digit */
-
-				d = dbase85[(unsigned char)*in++];
-				if (d < 0) return 0; /* failure - invalid character */
-				n = n * 85 + d;
-			}
-		}
-		*out++ = n;
-		out_count--;
-	}
-	return 1; /* success */
-}
-
-int base85_test(int verbose)
-{
-	static const uint32_t testdata[] = {
-		0x4c696f6e, 0x0ddba11, 0xba5eba11, 0xbeef, 0xcafe,
-		0xb00b, 0xdeadbea7, 0xdefec8, 0xbedabb1e, 0xf01dab1e, 0xf005ba11, 0xb01dface,
-		0x5ca1ab1e, 0xcab005e, 0xdeadfa11, 0x1eadf007, 0xdefea7,
-		~0UL, 0, 1, (unsigned)-8, (unsigned)-9, 0x4d616e20, 0x206e614d,
-	};
-
-	char buf[5 * NR(testdata) + 1];
-	uint32_t testout[NR(testdata)];
-	size_t i;
-
-	base85_init();
-
-	if (!base85_encode(buf, sizeof(buf), testdata, NR(testdata))) return 0;
-
-	if (!base85_decode(testout, NR(testout), buf)) return 0;
-
-	for (i = 0; i < NR(testdata); i++) {
-		if (testdata[i] != testout[i])
-			return 0; /* failure */
-	}
-
-	if (!base85_decode(&testout[0], 1, "Ll100")) return 0;
-	if (!base85_decode(&testout[1], 1, "Ll1")) return 0;
-	if (!base85_decode(&testout[2], 1, "00Ll1")) return 0;
-
-	return 1; /* pass */
-}
-#endif

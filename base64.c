@@ -2,6 +2,8 @@
  * base64.c: libb64 compressed code. Public domain.
  * See http://libb64.sourceforge.net/ for original code and infos.
  *
+ * See also liblynx library for full version of this code.
+ *
  * Modified and fixed by Lynx <lynx@lynxlynx.ru> 03Jun2016:
  * - Single TU, minimal external dependencies
  * - Stream operation, no newline insertions
@@ -18,20 +20,6 @@
 #include <string.h>
 #include "genpwd.h"
 
-/* WARNING: decoding part is not used (yet) */
-
-#if 0
-enum base64_decodestep {
-	estep_a, estep_b, estep_c, estep_d
-};
-
-struct base64_decodestate {
-	enum base64_decodestep step;
-	char plainchar;
-	size_t count;
-};
-#endif
-
 enum base64_encodestep {
 	dstep_a, dstep_b, dstep_c
 };
@@ -41,97 +29,6 @@ struct base64_encodestate {
 	char result;
 	size_t count;
 };
-
-#if 0
-int base64_decode_value(signed char value_in)
-{
-	static const signed char decoding[] = {
-		62, -1, -1, -1, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -2, -1,
-		-1, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-		21, 22, 23, 24, 25, -1, -1, -1, -1, -1, -1, 26, 27, 28, 29, 30, 31, 32, 33, 34,
-		35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
-	};
-	static const char decoding_size = sizeof(decoding);
-	if (value_in < 43) return -1;
-	value_in -= 43;
-	if (value_in >= decoding_size) return -1;
-	return decoding[(int)value_in];
-}
-
-void base64_init_decodestate(struct base64_decodestate *state_in)
-{
-	state_in->step = estep_a;
-	state_in->plainchar = 0;
-	state_in->count = 0;
-}
-
-#define CHECK_BOUNDS do { if (plainchar-plaintext_out >= plaintext_outl) goto _ret; } while (0)
-
-size_t base64_decode_block(const char *code_in, size_t length_in, char *plaintext_out, size_t plaintext_outl, struct base64_decodestate *state_in)
-{
-	const char *codechar = code_in;
-	char *plainchar = plaintext_out;
-	int fragment;
-	
-	*plainchar = state_in->plainchar;
-	
-	switch (state_in->step) {
-		while (1) {
-			case estep_a:
-					do {
-						if (codechar == code_in+length_in) {
-							state_in->step = estep_a;
-							state_in->plainchar = *plainchar;
-							state_in->count += (plainchar - plaintext_out);
-							return plainchar - plaintext_out;
-						}
-						fragment = base64_decode_value(*codechar++);
-					} while (fragment < 0);
-					*plainchar = (fragment & 0x3f) << 2;
-			case estep_b:
-					do {
-						if (codechar == code_in+length_in) {
-							state_in->step = estep_b;
-							state_in->plainchar = *plainchar;
-							state_in->count += (plainchar - plaintext_out);
-							return plainchar - plaintext_out;
-						}
-						fragment = base64_decode_value(*codechar++);
-					} while (fragment < 0);
-					*plainchar++ |= (fragment & 0x30) >> 4;
-					CHECK_BOUNDS;
-					*plainchar = (fragment & 0x0f) << 4;
-			case estep_c:
-					do {
-						if (codechar == code_in+length_in) {
-							state_in->step = estep_c;
-							state_in->plainchar = *plainchar;
-							state_in->count += (plainchar - plaintext_out);
-							return plainchar - plaintext_out;
-						}
-						fragment = base64_decode_value(*codechar++);
-					} while (fragment < 0);
-					*plainchar++ |= (fragment & 0x3c) >> 2;
-					CHECK_BOUNDS;
-					*plainchar = (fragment & 0x03) << 6;
-			case estep_d:
-					do {
-						if (codechar == code_in+length_in) {
-							state_in->step = estep_d;
-							state_in->plainchar = *plainchar;
-							state_in->count += (plainchar - plaintext_out);
-							return plainchar - plaintext_out;
-						}
-						fragment = base64_decode_value(*codechar++);
-					} while (fragment < 0);
-					*plainchar++ |= (fragment & 0x3f);
-		}
-	}
-
-_ret:	state_in->count += (plainchar - plaintext_out);
-	return plainchar - plaintext_out;
-}
-#endif
 
 void base64_init_encodestate(struct base64_encodestate *state_in)
 {
@@ -222,23 +119,6 @@ size_t base64_encode_blockend(char *code_out, struct base64_encodestate *state_i
 
 	return codechar - code_out;
 }
-
-/* Process single block of memory */
-#if 0
-size_t base64_decode(char *output, size_t outputl, const char *input, size_t inputl)
-{
-	struct base64_decodestate dstate;
-	size_t r;
-
-	base64_init_decodestate(&dstate);
-	base64_decode_block(input, inputl, output, outputl, &dstate);
-
-	r = dstate.count;
-	memset(&dstate, 0, sizeof(struct base64_decodestate));
-
-	return r;
-}
-#endif
 
 size_t base64_encode(char *output, const char *input, size_t inputl)
 {
