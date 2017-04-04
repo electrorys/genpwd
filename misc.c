@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdarg.h>
+#include <errno.h>
 
 #include "genpwd.h"
 #include "tf1024.h"
@@ -33,7 +35,7 @@ struct malloc_cell {
 static void *genpwd_zalloc(size_t sz)
 {
 	void *p = malloc(sz);
-	if (!p) xerror("Out of memory!");
+	if (!p) xerror(0, 1, "Out of memory!");
 	memset(p, 0, sz);
 	return p;
 }
@@ -45,7 +47,8 @@ void genpwd_free(void *p)
 	if (!p) return;
 
 	mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-	if (p != mc->data) xerror("Memory allocation bug!");
+	if (p != mc->data)
+		xerror(0, 1, "Memory allocation bug! %p != %p (sz = %zu)", p, mc->data, mc->size);
 	if (mc->size) {
 		memset(mc->data, 0, mc->size);
 		mc->size = 0;
@@ -93,7 +96,8 @@ size_t genpwd_szalloc(const void *p)
 {
 	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
 	if (!p) return 0;
-	if (p != mc->data) xerror("Memory allocation bug!");
+	if (p != mc->data)
+		xerror(0, 1, "Memory allocation bug! %p != %p (sz = %zu)", p, mc->data, mc->size);
 	return mc->size;
 }
 
@@ -114,13 +118,13 @@ void genpwd_getrandom(void *buf, size_t size)
 	/* Most common blocking. */
 	if (fd == -1) fd = open("/dev/random", O_RDONLY);
 	/* Very bad, is this a crippled chroot? */
-	if (fd == -1) xerror("urandom is required");
+	if (fd == -1) xerror(0, 1, "urandom is required");
 
 	x = 0;
 _again:	rd = read(fd, buf, size);
 	/* I want full random block, and there is no EOF can be! */
 	if (rd < size) {
-		if (x >= 100) xerror("urandom always returns less bytes!");
+		if (x >= 100) xerror(0, 1, "urandom always returns less bytes! (rd = %zu)", rd);
 		x++;
 		buf += rd;
 		size -= rd;
@@ -130,9 +134,28 @@ _again:	rd = read(fd, buf, size);
 	close(fd);
 }
 
-void xerror(const char *reason)
+void xerror(int noexit, int noerrno, const char *fmt, ...)
 {
-	fprintf(stderr, "%s\n", reason);
+	va_list ap;
+	char *s;
+
+	va_start(ap, fmt);
+
+	fprintf(stderr, "%s: ", progname);
+	vfprintf(stderr, fmt, ap);
+	if (errno && !noerrno) {
+		s = strerror(errno);
+		fprintf(stderr, ": %s\n", s);
+	}
+	else fputc('\n', stderr);
+
+	va_end(ap);
+
+	if (noexit) {
+		errno = 0;
+		return;
+	}
+
 	exit(2);
 }
 

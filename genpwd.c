@@ -10,11 +10,6 @@
 #include "genpwd.h"
 #include "defs.h"
 
-#define _strpp(x) #x
-#define _istr(x) _strpp(x)
-#define SMKPWD_OUTPUT_MAX _istr(MKPWD_OUTPUT_MAX)
-#define SMKPWD_ROUNDS_MAX _istr(MKPWD_ROUNDS_MAX)
-
 static char master[256] = {0}, name[256] = {0};
 static const char *d[] = {master, name, NULL, NULL};
 static char *pwdout = NULL;
@@ -23,7 +18,7 @@ static int no_newline = 0;
 static char keyfile[1024] = {0};
 static char data[128] = {0};
 
-static char *progname = NULL;
+char *progname = NULL;
 
 static char *stoi;
 
@@ -120,7 +115,7 @@ int main(int argc, char **argv)
 	progname = basename(argv[0]);
 
 	if (!selftest())
-		xerror("Self test failed. Program probably broken.");
+		xerror(0, 1, "Self test failed. Program probably broken.");
 
 	opterr = 0;
 	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:LNk:46md:U")) != -1) {
@@ -128,20 +123,18 @@ int main(int argc, char **argv)
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
 				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
-					xerror("rounds number must be between 0 and "
-						SMKPWD_ROUNDS_MAX);
+					xerror(0, 1, "%s: rounds number must be between 0 and %u", optarg, MKPWD_ROUNDS_MAX);
 				break;
 			case 'o':
 				default_string_offset = strtol(optarg, &stoi, 10);
 				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
-					xerror("offset must be between 0 and " SMKPWD_OUTPUT_MAX);
+					xerror(0, 1, "%s: offset must be between 0 and %u", optarg, MKPWD_OUTPUT_MAX);
 				break;
 			case 'l':
 				default_password_length = strtol(optarg, &stoi, 10);
 				if (!keyfile[0]
 				&& (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX))
-					xerror("password length must be between 1 and "
-						SMKPWD_OUTPUT_MAX);
+					xerror(0, 1, "%s: password length must be between 1 and %u", optarg, MKPWD_OUTPUT_MAX);
 				break;
 			case 'O':
 				format_option = 3;
@@ -165,7 +158,7 @@ int main(int argc, char **argv)
 				loadsalt(optarg, &_tweak, NULL);
 				/* Looks HACKY but acceptable */
 				if (genpwd_szalloc(_tweak) < sizeof(tweak))
-					xerror("Tweak must be at least 16 bytes long!");
+					xerror(0, 1, "%s: tweak must be at least %zu bytes long!", optarg, sizeof(tweak));
 				break;
 			case 'L':
 				no_newline = 1;
@@ -227,7 +220,7 @@ int main(int argc, char **argv)
 		pwdout = mkpwd(_salt, _slen, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
-		if (!pwdout[0] && pwdout[1]) xerror(pwdout+1);
+		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
 	
 		no_newline ? printf("%s", pwdout) : printf("%s\n", pwdout);
 		fflush(stdout);
@@ -239,16 +232,15 @@ int main(int argc, char **argv)
 		if (!strcmp(keyfile, "-")) f = stdout;
 		else {
 			f = fopen(keyfile, "wb");
-			if (!f) { perror(keyfile); fclose(f); exit(1); }
-			if (fchmod(fileno(f), S_IRUSR | S_IWUSR) != 0) {
-				perror(keyfile); fclose(f); exit(1);
-			}
+			if (!f) xerror(0, 0, keyfile);
+			if (fchmod(fileno(f), S_IRUSR | S_IWUSR) != 0)
+				xerror(0, 0, keyfile);
 		}
 
 		pwdout = mkpwbuf(_salt, _slen, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
-		if (!pwdout[0] && pwdout[1]) xerror(pwdout+1);
+		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
 
 		fwrite(pwdout, default_password_length, 1, f);
 		fclose(f);

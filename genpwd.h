@@ -7,6 +7,8 @@
 
 #define _genpwd_ids ".genpwd.ids"
 
+extern char *progname;
+
 extern const unsigned char salt[];
 extern int default_password_length;
 extern int default_string_offset;
@@ -42,7 +44,7 @@ void *genpwd_calloc(size_t nm, size_t sz);
 void *genpwd_realloc(void *p, size_t newsz);
 size_t genpwd_szalloc(const void *p);
 
-void xerror(const char *reason);
+void xerror(int noexit, int noerrno, const char *fmt, ...);
 void daemonise(void);
 
 extern char **ids;

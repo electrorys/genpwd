@@ -9,14 +9,7 @@
 #include "genpwd.h"
 #include "defs.h"
 
-#define _strpp(x) #x
-#define _istr(x) _strpp(x)
-#define SMKPWD_OUTPUT_MAX _istr(MKPWD_OUTPUT_MAX)
-#define SMKPWD_ROUNDS_MAX _istr(MKPWD_ROUNDS_MAX)
-
 #define TITLE_SHOW_CHARS 16
-
-#define _genpwd_ids     ".genpwd.ids"
 
 static FL_FORM *form;
 static Window win;
@@ -33,7 +26,7 @@ static int do_not_show;
 static char data[128];
 static char shadowed[MKPWD_OUTPUT_MAX];
 
-static char *progname;
+char *progname;
 static char newtitle[64];
 
 static char *stoi;
@@ -314,7 +307,7 @@ int main(int argc, char **argv)
 	fl_calloc = genpwd_calloc;
 
 	if (!selftest())
-		xerror("Self test failed. Program probably broken.");
+		xerror(0, 1, "Self test failed. Program probably broken.");
 
 	opterr = 0;
 	while ((c = getopt(argc, argv, "xn:o:l:ODX89is:t:46md:UN")) != -1) {
@@ -322,19 +315,17 @@ int main(int argc, char **argv)
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
 				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
-					xerror("rounds number must be between 0 and "
-						SMKPWD_ROUNDS_MAX);
+					xerror(0, 1, "%s: rounds number must be between 0 and %u", optarg, MKPWD_ROUNDS_MAX);
 				break;
 			case 'o':
 				default_string_offset = strtol(optarg, &stoi, 10);
 				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
-					xerror("offset must be between 0 and " SMKPWD_OUTPUT_MAX);
+					xerror(0, 1, "%s: offset must be between 0 and %u", optarg, MKPWD_OUTPUT_MAX);
 				break;
 			case 'l':
 				default_password_length = strtol(optarg, &stoi, 10);
 				if (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX)
-					xerror("password length must be between 1 and "
-						SMKPWD_OUTPUT_MAX);
+					xerror(0, 1, "%s: password length must be between 1 and %u", optarg, MKPWD_OUTPUT_MAX);
 				break;
 			case 'O':
 				format_option = 3;
@@ -358,7 +349,7 @@ int main(int argc, char **argv)
 				loadsalt(optarg, &_tweak, NULL);
 				/* Looks HACKY but acceptable */
 				if (genpwd_szalloc(_tweak) < sizeof(tweak))
-					xerror("Tweak must be at least 16 bytes long!");
+					xerror(0, 1, "%s: tweak must be at least %zu bytes long!", optarg, sizeof(tweak));
 				break;
 			case '4':
 				format_option = 0x1004;
