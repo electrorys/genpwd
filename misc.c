@@ -267,17 +267,28 @@ static void prepare_context(tf1024_ctx *tctx)
 	memset(ctr, 0, TF_KEY_SIZE);
 }
 
+static off_t fdsize(int fd)
+{
+	off_t l, cur;
+
+	cur = lseek(fd, 0L, SEEK_CUR);
+	l = lseek(fd, 0L, SEEK_SET);
+	if (l == -1) return -1;
+	l = lseek(fd, 0L, SEEK_END);
+	if (l == -1) return -1;
+	lseek(fd, cur, SEEK_SET);
+	return l;
+}
+
 static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 {
-	struct stat st;
 	char *ret = NULL; size_t n;
 	tf1024_ctx tctx;
 
-	if (fstat(fileno(f), &st) == -1)
+	n = (size_t)fdsize(fileno(f));
+	if (n == ((size_t)-1))
 		goto err;
 
-	n = (size_t)st.st_size;
-	memset(&st, 0, sizeof(struct stat));
 	ret = genpwd_malloc(n+1);
 	if (!ret) goto err;
 	memset(ret, 0, n+1);
