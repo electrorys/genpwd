@@ -97,6 +97,39 @@ size_t genpwd_szalloc(const void *p)
 	return mc->size;
 }
 
+void genpwd_getrandom(void *buf, size_t size)
+{
+	int fd = -1;
+	size_t rd;
+	int x;
+
+	/* Most common and probably available on every Nix, */
+	fd = open("/dev/urandom", O_RDONLY);
+	/* OpenBSD arc4 */
+	if (fd == -1) fd = open("/dev/arandom", O_RDONLY);
+	/* OpenBSD simple urandom */
+	if (fd == -1) fd = open("/dev/prandom", O_RDONLY);
+	/* OpenBSD srandom, blocking! */
+	if (fd == -1) fd = open("/dev/srandom", O_RDONLY);
+	/* Most common blocking. */
+	if (fd == -1) fd = open("/dev/random", O_RDONLY);
+	/* Very bad, is this a crippled chroot? */
+	if (fd == -1) xerror("urandom is required");
+
+	x = 0;
+_again:	rd = read(fd, buf, size);
+	/* I want full random block, and there is no EOF can be! */
+	if (rd < size) {
+		if (x >= 100) xerror("urandom always returns less bytes!");
+		x++;
+		buf += rd;
+		size -= rd;
+		goto _again;
+	}
+
+	close(fd);
+}
+
 void xerror(const char *reason)
 {
 	fprintf(stderr, "%s\n", reason);
@@ -247,10 +280,9 @@ void mkpwd_adjust(void)
 	mkpwd_password_length = default_password_length;
 }
 
-static void prepare_context(tf1024_ctx *tctx)
+static void prepare_context(tf1024_ctx *tctx, const void *ctr)
 {
 	unsigned char key[TF_KEY_SIZE];
-	unsigned char ctr[TF_KEY_SIZE];
 
 	mkpwd_adjust();
 
@@ -260,11 +292,9 @@ static void prepare_context(tf1024_ctx *tctx)
 	tf1024_init(tctx);
 	tf1024_set_tweak(tctx, _tweak);
 	tf1024_set_key(tctx, key, TF_KEY_SIZE);
-	sk1024(key, TF_KEY_SIZE, ctr, 1024);
 	tf1024_start_counter(tctx, ctr);
 
 	memset(key, 0, TF_KEY_SIZE);
-	memset(ctr, 0, TF_KEY_SIZE);
 }
 
 static off_t fdsize(int fd)
@@ -284,16 +314,23 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 {
 	char *ret = NULL; size_t n;
 	tf1024_ctx tctx;
+	unsigned char ctr[TF_KEY_SIZE];
 
 	n = (size_t)fdsize(fileno(f));
 	if (n == ((size_t)-1))
 		goto err;
 
+	if (n <= sizeof(ctr))
+		goto err;
+	n -= sizeof(ctr);
+
 	ret = genpwd_malloc(n+1);
 	if (!ret) goto err;
 	memset(ret, 0, n+1);
 
-	prepare_context(&tctx);
+	if (fread(ctr, sizeof(ctr), 1, f) < 1) goto err;
+	prepare_context(&tctx, ctr);
+	memset(ctr, 0, sizeof(ctr));
 
 	if (fread(ret, n, 1, f) < 1) goto err;
 	tf1024_crypt(&tctx, ret, n, ret);
@@ -319,8 +356,12 @@ err:
 static void encrypt_ids(FILE *f, char *data, size_t dsz)
 {
 	tf1024_ctx tctx;
+	unsigned char ctr[TF_KEY_SIZE];
 
-	prepare_context(&tctx);
+	genpwd_getrandom(ctr, sizeof(ctr));
+	fwrite(ctr, sizeof(ctr), 1, f);
+	prepare_context(&tctx, ctr);
+	memset(ctr, 0, sizeof(ctr));
 	tf1024_crypt(&tctx, data, dsz, data);
 
 	fwrite(data, dsz, 1, f);
