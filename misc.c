@@ -356,7 +356,19 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	memset(ctr, 0, sizeof(ctr));
 
 	if (fread(ret, n, 1, f) < 1) goto err;
-	tf1024_crypt(&tctx, ret, n, ret);
+	tf1024_crypt(&tctx, ret, n-sizeof(ctr), ret);
+
+	/* check MAC checksum at end of file (tfcrypt compatible) */
+	if (n <= sizeof(ctr))
+		goto err;
+	n -= sizeof(ctr);
+	tf1024_crypt(&tctx, ret+n, sizeof(ctr), ret+n);
+	sk1024(ret, n, ctr, 1024);
+	if (memcmp(ret+n, ctr, sizeof(ctr)) != 0)
+		goto err;
+	memset(ctr, 0, sizeof(ctr));
+	memset(ret+n, 0, sizeof(ctr));
+
 	if (strncmp(ret, _identifier, sizeof(_identifier)-1) != 0)
 		goto err;
 
@@ -366,6 +378,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	return 1;
 
 err:
+	memset(ctr, 0, sizeof(ctr));
 	tf1024_done(&tctx);
 	if (ret) {
 		memset(ret, 0, n);
@@ -385,10 +398,18 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 	fwrite(ctr, sizeof(ctr), 1, f);
 	prepare_context(&tctx, ctr);
 	memset(ctr, 0, sizeof(ctr));
+
+	/* data maybe even shorter - see when ids file does not exist. */
+	sk1024(data, dsz, ctr, 1024);
 	tf1024_crypt(&tctx, data, dsz, data);
+	tf1024_crypt(&tctx, ctr, sizeof(ctr), ctr);
 
+	/* write counter + data */
 	fwrite(data, dsz, 1, f);
+	/* write MAC checksum */
+	fwrite(ctr, sizeof(ctr), 1, f);
 
+	memset(ctr, 0, sizeof(ctr));
 	tf1024_done(&tctx);
 }
 
