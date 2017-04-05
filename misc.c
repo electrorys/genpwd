@@ -356,6 +356,9 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	memset(ctr, 0, sizeof(ctr));
 
 	if (fread(ret, n, 1, f) < 1) goto err;
+	/* check this before decrypt data + MAC checksum */
+	if (n <= sizeof(ctr))
+		goto err;
 	tf1024_crypt(&tctx, ret, n-sizeof(ctr), ret);
 
 	/* check MAC checksum at end of file (tfcrypt compatible) */
