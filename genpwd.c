@@ -26,6 +26,11 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
+	if (optopt == 'V') {
+		printf("genpwd passwords keeper, version %s.\n", _GENPWD_VERSION);
+		exit(0);
+	}
+
 	printf("usage: %s [-rODX8946mdULNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 	       	" [-s/k/t filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");

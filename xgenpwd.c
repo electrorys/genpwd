@@ -35,6 +35,12 @@ size_t _slen = sizeof(salt);
 
 static void usage(void)
 {
+	if (optopt == 'V') {
+		printf("genpwd passwords keeper.\n");
+		printf("Version %s, X11 XForms port.\n", _GENPWD_VERSION);
+		exit(0);
+	}
+
 	printf("usage: %s [-xODX8946mdUNi] [-n PASSES] [-o OFFSET]"
 	       	" [-l PASSLEN] [-s/t filename/-]\n\n", progname);
 	printf("  -x: do not show password in output box. 'Copy' button will work.\n");
