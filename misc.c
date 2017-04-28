@@ -313,8 +313,8 @@ static void prepare_context(tf1024_ctx *tctx, const void *ctr)
 	if (mkpwd_passes_number > 1)
 		sk1024_loop(key, TF_KEY_SIZE, key, 1024, mkpwd_passes_number);
 	tf1024_init(tctx);
-	tf1024_set_tweak(tctx, _tweak);
-	tf1024_set_key(tctx, key, TF_KEY_SIZE);
+	tfc1024_set_tweak(&tctx->tfc, _tweak);
+	tfc1024_set_key(&tctx->tfc, key, TF_KEY_SIZE);
 	tf1024_start_counter(tctx, ctr);
 
 	memset(key, 0, TF_KEY_SIZE);
