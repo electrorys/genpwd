@@ -25,8 +25,6 @@ static size_t dsz = 0;
 const unsigned char *_salt = salt;
 extern size_t _slen;
 
-const unsigned char *_tweak = tweak; /* fixed size */
-
 struct malloc_cell {
 	size_t size;
 	void *data;
@@ -305,18 +303,20 @@ void mkpwd_adjust(void)
 
 static void prepare_context(tf1024_ctx *tctx, const void *ctr)
 {
-	unsigned char key[TF_KEY_SIZE];
+	unsigned char key[TF_KEY_SIZE], tweak[sizeof(tctx->tfc.T)-TF_SIZE_UNIT];
 
 	mkpwd_adjust();
 
-	sk1024(_salt, _slen, key, 1024);
+	sk1024(_salt, _slen, key, TF_MAX_BITS);
 	if (mkpwd_passes_number > 1)
-		sk1024_loop(key, TF_KEY_SIZE, key, 1024, mkpwd_passes_number);
+		sk1024_loop(key, TF_KEY_SIZE, key, TF_MAX_BITS, mkpwd_passes_number);
 	tf1024_init(tctx);
-	tfc1024_set_tweak(&tctx->tfc, _tweak);
 	tfc1024_set_key(&tctx->tfc, key, TF_KEY_SIZE);
+	sk1024(key, sizeof(key), tweak, TF_TO_BITS(sizeof(tweak)));
+	tfc1024_set_tweak(&tctx->tfc, tweak);
 	tf1024_start_counter(tctx, ctr);
 
+	memset(tweak, 0, sizeof(tweak));
 	memset(key, 0, TF_KEY_SIZE);
 }
 
@@ -349,7 +349,6 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 
 	ret = genpwd_malloc(n+1);
 	if (!ret) goto err;
-	memset(ret, 0, n+1);
 
 	if (fread(ctr, sizeof(ctr), 1, f) < 1) goto err;
 	prepare_context(&tctx, ctr);
@@ -366,7 +365,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 		goto err;
 	n -= sizeof(ctr);
 	tf1024_crypt(&tctx, ret+n, sizeof(ctr), ret+n);
-	sk1024(ret, n, ctr, 1024);
+	sk1024(ret, n, ctr, TF_MAX_BITS);
 	if (memcmp(ret+n, ctr, sizeof(ctr)) != 0)
 		goto err;
 	memset(ctr, 0, sizeof(ctr));
@@ -403,7 +402,7 @@ static void encrypt_ids(FILE *f, char *data, size_t dsz)
 	memset(ctr, 0, sizeof(ctr));
 
 	/* data maybe even shorter - see when ids file does not exist. */
-	sk1024(data, dsz, ctr, 1024);
+	sk1024(data, dsz, ctr, TF_MAX_BITS);
 	tf1024_crypt(&tctx, data, dsz, data);
 	tf1024_crypt(&tctx, ctr, sizeof(ctr), ctr);
 

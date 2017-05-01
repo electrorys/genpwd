@@ -59,8 +59,6 @@ static void usage(void)
 	       	" 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename"
 	       	" or stdin (if '-')\n");
-	printf("  -t filename: load threefish tweak binary from filename"
-		" or stdin (if '-')\n");
 	printf("  -k filename: generate a keyfile instead of password\n\n");
 	exit(1);
 }
@@ -130,7 +128,7 @@ int main(int argc, char **argv)
 		xerror(0, 1, "Self test failed. Program probably broken.");
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:t:LNk:46md:U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89is:LNk:46md:U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -165,12 +163,6 @@ int main(int argc, char **argv)
 				break;
 			case 's':
 				loadsalt(optarg, &_salt, &_slen);
-				break;
-			case 't':
-				loadsalt(optarg, &_tweak, NULL);
-				/* Looks HACKY but acceptable */
-				if (genpwd_szalloc(_tweak) < sizeof(tweak))
-					xerror(0, 1, "%s: tweak must be at least %zu bytes long!", optarg, sizeof(tweak));
 				break;
 			case 'L':
 				no_newline = 1;

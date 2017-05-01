@@ -13,7 +13,6 @@ extern const unsigned char salt[];
 extern int default_password_length;
 extern int default_string_offset;
 extern int default_passes_number;
-extern const unsigned char tweak[16];
 
 extern const char testmaster[];
 extern const char testname[];
@@ -53,8 +52,6 @@ typedef void (*ids_populate_t)(const char *str);
 
 extern const unsigned char *_salt;
 extern size_t _slen;
-
-extern const unsigned char *_tweak;
 
 void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 			unsigned int bits, unsigned int passes);
