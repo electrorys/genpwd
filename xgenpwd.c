@@ -49,7 +49,7 @@ static void usage(void)
 	}
 
 	printf("usage: %s [-xODX8946mdUNi] [-n PASSES] [-o OFFSET]"
-	       	" [-l PASSLEN] [-s/t filename/-]\n\n", progname);
+		" [-l PASSLEN] [-s filename/-]\n\n", progname);
 	printf("  -x: do not show password in output box. 'Copy' button will work.\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
