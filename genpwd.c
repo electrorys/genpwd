@@ -38,7 +38,7 @@ static void usage(void)
 		exit(0);
 	}
 
-	printf("usage: %s [-rODX8946mdULNix] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	printf("usage: %s [-rODX8946mdULNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 		" [-s/k filename/-]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
