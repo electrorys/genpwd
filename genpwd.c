@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 
 #include "genpwd.h"
+#include "getpasswd.h"
 #include "defs.h"
 
 static char master[256] = {0}, name[256] = {0};
@@ -30,6 +31,8 @@ char *progname = NULL;
 static char *stoi;
 
 size_t _slen = sizeof(salt);
+
+static struct getpasswd_state getps;
 
 static void usage(void)
 {
@@ -63,58 +66,18 @@ static void usage(void)
 	exit(1);
 }
 
-/* Thanks to musl for this code */
-static void getpasswd(char *password, const char *echo, size_t pwdlen)
-{
-	int fd;
-	struct termios s, t;
-	ssize_t l;
-
-	if ((fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) < 0) fd = 0;
-
-	tcgetattr(fd, &t);
-	s = t;
-	t.c_lflag &= ~ECHO;
-	t.c_lflag |= ICANON;
-	t.c_iflag &= ~(INLCR|IGNCR);
-	t.c_iflag |= ICRNL;
-	tcsetattr(fd, TCSAFLUSH, &t);
-	tcdrain(fd);
-
-	fputs(echo, stderr);
-	fflush(stderr);
-
-	l = read(fd, password, pwdlen);
-	if (l >= 0) {
-		if (l > 0 && password[l-1] == '\n') l--;
-		password[l] = 0;
-	}
-
-	fputc('\n', stderr);
-	fflush(stderr);
-
-	tcsetattr(fd, TCSAFLUSH, &s);
-
-	if (fd > 2) close(fd);
-}
-
 static void getstring(char *out, const char *echo, int len)
 {
-	int fd;
 	ssize_t l;
 
 	fputs(echo, stderr);
 	fflush(stderr);
 
-	if ((fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) < 0) fd = 0;
-
-	l = read(fd, out, len);
+	l = read(0, out, len);
 	if (l >= 0) {
 		if (l > 0 && out[l-1] == '\n') l--;
 		out[l] = 0;
 	}
-
-	if (fd > 2) close(fd);
 }
 
 
@@ -204,11 +167,18 @@ int main(int argc, char **argv)
 	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
-	getpasswd(master, "Enter master:", sizeof(master)-1);
+	memset(&getps, 0, sizeof(struct getpasswd_state));
+	getps.fd = -1;
+	getps.passwd = master;
+	getps.pwlen = sizeof(master)-1;
+	getps.echo = "Enter master: ";
+	getps.maskchar = 'x';
+	getpasswd(&getps);
+	memset(&getps, 0, sizeof(struct getpasswd_state));
 	pwdout = mkpwd_hint(_salt, _slen, master);
 	fprintf(stderr, "Password hint: %s\n", pwdout);
 	memset(pwdout, 0, 4);
-	getstring(name, "Enter name:", sizeof(name)-1);
+	getstring(name, "Enter name: ", sizeof(name)-1);
 
 	loadids(NULL);
 	if (!is_dupid(name)) {
