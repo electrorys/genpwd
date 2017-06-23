@@ -80,6 +80,14 @@ static void getstring(char *out, const char *echo, int len)
 	}
 }
 
+static int getps_filter(struct getpasswd_state *getps, int chr, size_t pos)
+{
+	if (chr == '\x03') { /* ^C */
+		getps->retn = (size_t)-1;
+		return 6;
+	}
+	return 1;
+}
 
 int main(int argc, char **argv)
 {
@@ -172,8 +180,9 @@ int main(int argc, char **argv)
 	getps.passwd = master;
 	getps.pwlen = sizeof(master)-1;
 	getps.echo = "Enter master: ";
+	getps.charfilter = getps_filter;
 	getps.maskchar = 'x';
-	getpasswd(&getps);
+	if (getpasswd(&getps) == (size_t)-1) return 1;
 	memset(&getps, 0, sizeof(struct getpasswd_state));
 	pwdout = mkpwd_hint(_salt, _slen, master);
 	fprintf(stderr, "Password hint: %s\n", pwdout);

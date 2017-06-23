@@ -9,7 +9,7 @@
 
 size_t getpasswd(struct getpasswd_state *getps)
 {
-	int fd;
+	int fd, tty_opened = 0, x;
 	int c, clear;
 	struct termios s, t;
 	size_t l;
@@ -18,6 +18,8 @@ size_t getpasswd(struct getpasswd_state *getps)
 
 	if (getps->fd == -1) {
 		if ((fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) < 0) fd = 0;
+		getps->fd = fd;
+		tty_opened = 1;
 	}
 	else fd = getps->fd;
 
@@ -25,6 +27,7 @@ size_t getpasswd(struct getpasswd_state *getps)
 	memset(&s, 0, sizeof(struct termios));
 	tcgetattr(fd, &t);
 	s = t;
+	if (getps->sanetty) memcpy(getps->sanetty, &s, sizeof(struct termios));
 	cfmakeraw(&t);
 	t.c_iflag |= ICRNL;
 	tcsetattr(fd, TCSANOW, &t);
@@ -34,13 +37,13 @@ size_t getpasswd(struct getpasswd_state *getps)
 		fflush(stderr);
 	}
 
-	l = 0;
+	l = 0; x = 0;
 	while (1) {
 		clear = 1;
 		c = 0;
 		if (read(fd, &c, sizeof(char)) == -1) break;
 		if (getps->charfilter) {
-			int x = getps->charfilter(getps, c, l);
+			x = getps->charfilter(getps, c, l);
 			if (x == 0) {
 				clear = 0;
 				goto _newl;
@@ -49,6 +52,12 @@ size_t getpasswd(struct getpasswd_state *getps)
 			else if (x == 3) goto _erase;
 			else if (x == 4) goto _delete;
 			else if (x == 5) break;
+			else if (x == 6) {
+				clear = 0;
+				l = getps->retn;
+				memset(getps->passwd, 0, getps->pwlen);
+				goto _err;
+			}
 		}
 
 		if (c == '\x7f'
@@ -78,14 +87,13 @@ _newl:		if (c == '\n' || c == '\r' || (!(getps->flags & GETP_NOINTERP) && c == '
 		if (l >= getps->pwlen) break;
 	};
 
-	fputs("\r\n", stderr);
+_err:	fputs("\r\n", stderr);
 	fflush(stderr);
-	*(getps->passwd+l) = 0;
+	if (x != 6) *(getps->passwd+l) = 0;
 
 	tcsetattr(fd, TCSANOW, &s);
 
-	if (fd > 2 && getps->fd == -1) close(fd);
+	if (tty_opened) close(fd);
 
 	return l;
 }
-
