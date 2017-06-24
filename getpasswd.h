@@ -21,6 +21,6 @@ struct getpasswd_state {
 	size_t retn;
 };
 
-size_t getpasswd(struct getpasswd_state *getps);
+size_t xgetpasswd(struct getpasswd_state *getps);
 
 #endif

@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include "getpasswd.h"
 
-size_t getpasswd(struct getpasswd_state *getps)
+size_t xgetpasswd(struct getpasswd_state *getps)
 {
 	int fd, tty_opened = 0, x;
 	int c, clear;

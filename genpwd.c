@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 	getps.echo = "Enter master: ";
 	getps.charfilter = getps_filter;
 	getps.maskchar = 'x';
-	if (getpasswd(&getps) == (size_t)-1) return 1;
+	if (xgetpasswd(&getps) == (size_t)-1) return 1;
 	memset(&getps, 0, sizeof(struct getpasswd_state));
 	pwdout = mkpwd_hint(_salt, _slen, master);
 	fprintf(stderr, "Password hint: %s\n", pwdout);
