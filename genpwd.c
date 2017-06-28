@@ -176,7 +176,7 @@ int main(int argc, char **argv)
 	argc = 1;
 
 	memset(&getps, 0, sizeof(struct getpasswd_state));
-	getps.fd = -1;
+	getps.fd = getps.efd = -1;
 	getps.passwd = master;
 	getps.pwlen = sizeof(master)-1;
 	getps.echo = "Enter master: ";

@@ -5,43 +5,73 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "getpasswd.h"
+
+static inline size_t intlen(int chr)
+{
+	if (chr >> 24) return 4;
+	if (chr >> 16) return 3;
+	if (chr >> 8) return 2;
+	if (chr) return 1;
+	return 0;
+}
 
 size_t xgetpasswd(struct getpasswd_state *getps)
 {
-	int fd, tty_opened = 0, x;
+	int tty_opened = 0, x;
 	int c, clear;
 	struct termios s, t;
-	size_t l;
+	size_t l, echolen = 0;
 
 	if (!getps) return ((size_t)-1);
 
+	/*
+	 * Both stdin and stderr point to same fd. This cannot happen.
+	 * This only means that getps was memzero'd.
+	 * Do not blame user for that, just fix it.
+	 */
+	if ((getps->fd == 0 && getps->efd == 0) || getps->efd == -1) getps->efd = 2;
+
 	if (getps->fd == -1) {
-		if ((fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) < 0) fd = 0;
-		getps->fd = fd;
+		if ((getps->fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) == -1) getps->fd = 0;
 		tty_opened = 1;
 	}
-	else fd = getps->fd;
 
 	memset(&t, 0, sizeof(struct termios));
 	memset(&s, 0, sizeof(struct termios));
-	tcgetattr(fd, &t);
+	if (tcgetattr(getps->fd, &t) == -1) {
+		getps->error = errno;
+		return ((size_t)-1);
+	}
 	s = t;
 	if (getps->sanetty) memcpy(getps->sanetty, &s, sizeof(struct termios));
 	cfmakeraw(&t);
 	t.c_iflag |= ICRNL;
-	tcsetattr(fd, TCSANOW, &t);
+	if (tcsetattr(getps->fd, TCSANOW, &t) == -1) {
+		getps->error = errno;
+		return ((size_t)-1);
+	}
 
 	if (getps->echo) {
-		fputs(getps->echo, stderr);
-		fflush(stderr);
+		echolen = strlen(getps->echo);
+		if (write(getps->efd, getps->echo, echolen) == -1) {
+			getps->error = errno;
+			l = ((size_t)-1);
+			goto _xerr;
+		}
 	}
 
 	l = 0; x = 0;
+	memset(getps->passwd, 0, getps->pwlen);
 	while (1) {
 		clear = 1;
 		c = 0;
-		if (read(fd, &c, sizeof(char)) == -1) break;
+		if (read(getps->fd, &c, sizeof(char)) == -1) {
+			getps->error = errno;
+			l = ((size_t)-1);
+			goto _xerr;
+		}
 		if (getps->charfilter) {
 			x = getps->charfilter(getps, c, l);
 			if (x == 0) {
@@ -59,41 +89,72 @@ size_t xgetpasswd(struct getpasswd_state *getps)
 				goto _err;
 			}
 		}
+		if (l >= getps->pwlen && (getps->flags & GETP_WAITFILL)) clear = 0;
 
 		if (c == '\x7f'
 		|| (c == '\x08' && !(getps->flags & GETP_NOINTERP))) { /* Backspace / ^H */
 _erase:			if (l == 0) continue;
 			clear = 0;
 			l--;
-			if (!(getps->flags & GETP_NOECHO)) fputs("\x08\e[1X", stderr);
-			fflush(stderr);
+			if (!(getps->flags & GETP_NOECHO)) {
+				if (write(getps->efd, "\x08\e[1X", sizeof("\x08\e[1X")-1) == -1) {
+					getps->error = errno;
+					l = ((size_t)-1);
+					goto _xerr;
+				}
+			}
 		}
 		else if (!(getps->flags & GETP_NOINTERP)
 		&& (c == '\x15' || c == '\x17')) { /* ^U / ^W */
 _delete:		clear = 0;
 			l = 0;
 			memset(getps->passwd, 0, getps->pwlen);
-			fputs("\e[2K\e[0G", stderr);
-			if (getps->echo) fputs(getps->echo, stderr);
-			fflush(stderr);
+			if (write(getps->efd, "\e[2K\e[0G", sizeof("\e[2K\e[0G")-1) == -1) {
+				getps->error = errno;
+				l = ((size_t)-1);
+				goto _xerr;
+			}
+			if (getps->echo) {
+				if (write(getps->efd, getps->echo, echolen) == -1) {
+					getps->error = errno;
+					l = ((size_t)-1);
+					goto _xerr;
+				}
+			}
 		}
-_newl:		if (c == '\n' || c == '\r' || (!(getps->flags & GETP_NOINTERP) && c == '\x04')) break;
+_newl:		if (c == '\n'
+		|| c == '\r'
+		|| (!(getps->flags & GETP_NOINTERP) && c == '\x04')) break;
 		if (clear) {
 			*(getps->passwd+l) = c;
 			l++;
-			if (!(getps->flags & GETP_NOECHO)) fputc(getps->maskchar, stderr);
-			fflush(stderr);
+			if (!(getps->flags & GETP_NOECHO)) {
+				if (intlen(getps->maskchar) &&
+					write(getps->efd, &getps->maskchar,
+					intlen(getps->maskchar)) == -1) {
+						getps->error = errno;
+						l = ((size_t)-1);
+						goto _xerr;
+				}
+			}
 		}
-		if (l >= getps->pwlen) break;
+		if (l >= getps->pwlen && !(getps->flags & GETP_WAITFILL)) break;
 	};
 
-_err:	fputs("\r\n", stderr);
-	fflush(stderr);
+_err:	if (write(getps->efd, "\r\n", sizeof("\r\n")-1) == -1) {
+		getps->error = errno;
+		l = ((size_t)-1);
+	}
 	if (x != 6) *(getps->passwd+l) = 0;
 
-	tcsetattr(fd, TCSANOW, &s);
+_xerr:	if (tcsetattr(getps->fd, TCSANOW, &s) == -1) {
+		if (getps->error == 0) {
+			getps->error = errno;
+			l = ((size_t)-1);
+		}
+	}
 
-	if (tty_opened) close(fd);
+	if (tty_opened) close(getps->fd);
 
 	return l;
 }
