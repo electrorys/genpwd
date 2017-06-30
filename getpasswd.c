@@ -97,7 +97,7 @@ _erase:			if (l == 0) continue;
 			clear = 0;
 			l--;
 			if (!(getps->flags & GETP_NOECHO)) {
-				if (write(getps->efd, "\x08\e[1X", sizeof("\x08\e[1X")-1) == -1) {
+				if (write(getps->efd, "\x08\033[1X", sizeof("\x08\033[1X")-1) == -1) {
 					getps->error = errno;
 					l = ((size_t)-1);
 					goto _xerr;
@@ -109,7 +109,7 @@ _erase:			if (l == 0) continue;
 _delete:		clear = 0;
 			l = 0;
 			memset(getps->passwd, 0, getps->pwlen);
-			if (write(getps->efd, "\e[2K\e[0G", sizeof("\e[2K\e[0G")-1) == -1) {
+			if (write(getps->efd, "\033[2K\033[0G", sizeof("\033[2K\033[0G")-1) == -1) {
 				getps->error = errno;
 				l = ((size_t)-1);
 				goto _xerr;
