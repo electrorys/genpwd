@@ -66,26 +66,27 @@ static void usage(void)
 	exit(1);
 }
 
-static void getstring(char *out, const char *echo, int len)
-{
-	ssize_t l;
-
-	fputs(echo, stderr);
-	fflush(stderr);
-
-	l = read(0, out, len);
-	if (l >= 0) {
-		if (l > 0 && out[l-1] == '\n') l--;
-		out[l] = 0;
-	}
-}
-
 static int getps_filter(struct getpasswd_state *getps, int chr, size_t pos)
 {
 	if (chr == '\x03') { /* ^C */
 		getps->retn = (size_t)-1;
 		return 6;
 	}
+	return 1;
+}
+
+static inline int isctrlchr(int c)
+{
+	if (c == 9) return 0;
+	if (c >= 0 && c <= 31) return 1;
+	if (c == 127) return 1;
+	return 0;
+}
+
+static int getps_plain_filter(struct getpasswd_state *getps, int chr, size_t pos)
+{
+	if (pos < getps->pwlen && !isctrlchr(chr))
+		write(getps->efd, &chr, sizeof(char));
 	return 1;
 }
 
@@ -184,10 +185,19 @@ int main(int argc, char **argv)
 	getps.maskchar = 'x';
 	if (xgetpasswd(&getps) == (size_t)-1) return 1;
 	memset(&getps, 0, sizeof(struct getpasswd_state));
+
 	pwdout = mkpwd_hint(_salt, _slen, master);
 	fprintf(stderr, "Password hint: %s\n", pwdout);
 	memset(pwdout, 0, 4);
-	getstring(name, "Enter name: ", sizeof(name)-1);
+
+	getps.fd = getps.efd = -1;
+	getps.passwd = name;
+	getps.pwlen = sizeof(name)-1;
+	getps.echo = "Enter name: ";
+	getps.charfilter = getps_plain_filter;
+	getps.maskchar = 0;
+	if (xgetpasswd(&getps) == (size_t)-1) return 1;
+	memset(&getps, 0, sizeof(struct getpasswd_state));
 
 	loadids(NULL);
 	if (!is_dupid(name)) {
