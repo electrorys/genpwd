@@ -14,7 +14,7 @@ struct getpasswd_state {
 	char *passwd;
 	size_t pwlen;
 	const char *echo;
-	int maskchar;
+	char maskchar;
 	getpasswd_filt_t charfilter;
 	int fd;
 	int efd;
