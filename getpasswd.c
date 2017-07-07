@@ -27,7 +27,7 @@ size_t xgetpasswd(struct getpasswd_state *getps)
 
 	if (getps->fd == -1) {
 		if ((getps->fd = open("/dev/tty", O_RDONLY|O_NOCTTY)) == -1) getps->fd = 0;
-		tty_opened = 1;
+		else tty_opened = 1;
 	}
 
 	memset(&t, 0, sizeof(struct termios));
