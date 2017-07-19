@@ -101,6 +101,7 @@ size_t genpwd_szalloc(const void *p)
 
 void genpwd_getrandom(void *buf, size_t size)
 {
+	char *ubuf = buf;
 	int fd = -1;
 	size_t rd;
 	int x;
@@ -119,12 +120,12 @@ void genpwd_getrandom(void *buf, size_t size)
 	if (fd == -1) xerror(0, 1, "urandom is required");
 
 	x = 0;
-_again:	rd = read(fd, buf, size);
+_again:	rd = read(fd, ubuf, size);
 	/* I want full random block, and there is no EOF can be! */
 	if (rd < size) {
 		if (x >= 100) xerror(0, 1, "urandom always returns less bytes! (rd = %zu)", rd);
 		x++;
-		buf += rd;
+		ubuf += rd;
 		size -= rd;
 		goto _again;
 	}
@@ -274,7 +275,7 @@ static void addid_init(const char *id, char *initid)
 
 void addid(const char *id)
 {
-	return addid_init(id, NULL);
+	addid_init(id, NULL);
 }
 
 void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,

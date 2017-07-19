@@ -92,7 +92,7 @@ static int getps_plain_filter(struct getpasswd_state *getps, int chr, size_t pos
 
 int main(int argc, char **argv)
 {
-	int c;
+	int i, c;
 
 	progname = basename(argv[0]);
 
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
+	for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
 	argc = 1;
 
 	memset(&getps, 0, sizeof(struct getpasswd_state));
