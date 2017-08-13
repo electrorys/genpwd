@@ -48,7 +48,7 @@ void daemonise(void);
 
 extern char **ids;
 extern int nids;
-typedef void (*ids_populate_t)(const char *str);
+typedef void (*ids_populate_fn)(const char *str);
 
 extern const unsigned char *_salt;
 extern size_t _slen;
@@ -60,7 +60,7 @@ int findid(const char *id);
 int delid(const char *id);
 int is_dupid(const char *id);
 void addid(const char *id);
-void loadids(ids_populate_t idpfn);
+void loadids(ids_populate_fn idpfn);
 void listids(void);
 void to_saveids(int x);
 void saveids(void);

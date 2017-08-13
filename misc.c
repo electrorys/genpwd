@@ -445,7 +445,7 @@ static void alloc_fheader(void)
 	dsz = sizeof(_identifier);
 }
 
-void loadids(ids_populate_t idpfn)
+void loadids(ids_populate_fn idpfn)
 {
 	char path[PATH_MAX];
 	FILE *f = NULL;
