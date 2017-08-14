@@ -243,5 +243,7 @@ int main(int argc, char **argv)
 
 	saveids();
 
+	genpwd_exit_memory();
+
 	return 0;
 }

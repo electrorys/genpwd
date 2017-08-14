@@ -497,5 +497,7 @@ int main(int argc, char **argv)
 
 	fl_finish();
 
+	genpwd_exit_memory();
+
 	return 0;
 }

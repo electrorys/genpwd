@@ -12,8 +12,11 @@
 
 #include "genpwd.h"
 #include "tf1024.h"
+#include "smalloc.h"
 
 #define _identifier "# _genpwd_ids file"
+
+static char genpwd_memory_pool[65536];
 
 char **ids;
 int nids;
@@ -25,78 +28,58 @@ static size_t dsz = 0;
 const unsigned char *_salt = salt;
 extern size_t _slen;
 
-struct malloc_cell {
-	size_t size;
-	void *data;
-};
-
-static void *genpwd_zalloc(size_t sz)
+static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 {
-	void *p = malloc(sz);
-	if (!p) xerror(0, 1, "Out of memory!");
-	memset(p, 0, sz);
-	return p;
+	xerror(0, 1, "OOM: failed to allocate %zu bytes!", failsz);
+	return 0;
+}
+
+static void genpwd_ub_handler(struct smalloc_pool *spool, void *offender)
+{
+	xerror(0, 1, "UB: %p is not from our data storage!", offender);
+}
+
+static void genpwd_init_memory(void)
+{
+	static int done;
+
+	if (!done) {
+		sm_set_bad_block_handler(genpwd_ub_handler);
+		if (!sm_set_default_pool(
+		genpwd_memory_pool, sizeof(genpwd_memory_pool), 1, genpwd_oom_handler))
+			xerror(0, 1, "memory pool initialisation failed!");
+		done = 1;
+	}
+}
+
+void genpwd_exit_memory(void)
+{
+	/* will erase memory pool automatically */
+	sm_release_default_pool();
 }
 
 void genpwd_free(void *p)
 {
-	struct malloc_cell *mc;
-
-	if (!p) return;
-
-	mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-	if (p != mc->data)
-		xerror(0, 1, "Memory allocation bug! %p != %p (sz = %zu)", p, mc->data, mc->size);
-	if (mc->size) {
-		memset(mc->data, 0, mc->size);
-		mc->size = 0;
-	}
-	memset(mc, 0, sizeof(struct malloc_cell));
-	free(mc);
+	genpwd_init_memory();
+	sm_free(p);
 }
 
 void *genpwd_malloc(size_t sz)
 {
-	struct malloc_cell *mc = genpwd_zalloc(sizeof(struct malloc_cell)+sz);
-
-	if (mc) {
-		mc->data = (void *)((unsigned char *)mc+sizeof(struct malloc_cell));
-		mc->size = sz;
-		return mc->data;
-	}
-	return NULL;
+	genpwd_init_memory();
+	return sm_malloc(sz);
 }
 
 void *genpwd_calloc(size_t nm, size_t sz)
 {
-	return genpwd_malloc(nm * sz);
+	genpwd_init_memory();
+	return sm_calloc(nm, sz);
 }
 
 void *genpwd_realloc(void *p, size_t newsz)
 {
-	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-
-	if (!p) return genpwd_malloc(newsz);
-
-	if (newsz > mc->size) {
-		void *newdata = genpwd_malloc(newsz);
-
-		if (!newdata) return NULL;
-		memcpy(newdata, p, mc->size);
-		genpwd_free(p);
-
-		return newdata;
-	}
-	return p;
-}
-
-size_t genpwd_szalloc(const void *p)
-{
-	struct malloc_cell *mc = (struct malloc_cell *)((unsigned char *)p-sizeof(struct malloc_cell));
-	if (!p) return 0;
-	if (p != mc->data)
-		xerror(0, 1, "Memory allocation bug! %p != %p (sz = %zu)", p, mc->data, mc->size);
-	return mc->size;
+	genpwd_init_memory();
+	return sm_realloc(p, newsz);
 }
 
 void genpwd_getrandom(void *buf, size_t size)

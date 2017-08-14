@@ -343,7 +343,6 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 
 	ret = genpwd_malloc(mkpwd_password_length);
 	if (!ret) return "\0Can't allocate memory";
-	memset(ret, 0, mkpwd_password_length);
 
 	sk1024_init(&ctx, mkpwd_password_length * 8);
 	sk1024_update(&ctx, data[0], strnlen(data[0], MKPWD_INPUT_MAX));
@@ -355,7 +354,7 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 
 	if (mkpwd_passes_number)
 		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
-			sk1024(ret, sizeof(ret), ret, mkpwd_password_length * 8);
+			sk1024(ret, mkpwd_password_length, ret, mkpwd_password_length * 8);
 
 	return ret;
 }
