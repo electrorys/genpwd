@@ -1,3 +1,6 @@
+#ifndef _MKPWD_H
+#define _MKPWD_H
+
 #define MKPWD_INPUT_MAX 1024
 #define MKPWD_OUTPUT_MAX 180
 #define MKPWD_ROUNDS_MAX 10000000
@@ -6,3 +9,5 @@ extern int mkpwd_passes_number, mkpwd_string_offset, mkpwd_password_length, mkpw
 char *mkpwd(const void *salt, size_t slen, const char **data);
 void *mkpwbuf(const void *salt, size_t slen, const char **data);
 char *mkpwd_hint(const void *salt, size_t slen, const char *pw);
+
+#endif

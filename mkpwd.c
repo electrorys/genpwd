@@ -194,7 +194,7 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 		return "\0Master password or name are too long";
 	pwdl = 0;
 
-	sk1024_init(&ctx, 1024);
+	sk1024_init(&ctx, TF_MAX_BITS);
 	sk1024_update(&ctx, data[0], strnlen(data[0], MKPWD_INPUT_MAX));
 	sk1024_update(&ctx, salt, slen);
 	for (i = 1; data[i] && i < _mkpwd_data_max; i++)
@@ -204,7 +204,7 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 
 	if (mkpwd_passes_number)
 		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
-			sk1024(tmp, sizeof(tmp), tmp, 1024);
+			sk1024(tmp, sizeof(tmp), tmp, TF_MAX_BITS);
 
 	if (mkpwd_output_format == 0) {
 		unsigned char b64test[MKPWD_OUTPUT_MAX];
@@ -344,7 +344,7 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 	ret = genpwd_malloc(mkpwd_password_length);
 	if (!ret) return "\0Can't allocate memory";
 
-	sk1024_init(&ctx, mkpwd_password_length * 8);
+	sk1024_init(&ctx, TF_TO_BITS(mkpwd_password_length));
 	sk1024_update(&ctx, data[0], strnlen(data[0], MKPWD_INPUT_MAX));
 	sk1024_update(&ctx, salt, slen);
 	for (i = 1; data[i] && i < _mkpwd_data_max; i++)
@@ -354,7 +354,7 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 
 	if (mkpwd_passes_number)
 		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
-			sk1024(ret, mkpwd_password_length, ret, mkpwd_password_length * 8);
+			sk1024(ret, mkpwd_password_length, ret, TF_TO_BITS(mkpwd_password_length));
 
 	return ret;
 }
