@@ -117,12 +117,14 @@ void tfc1024_decrypt_blk(tfc1024_ctx *ctx, const uint64_t *input, uint64_t *outp
 #endif
 
 
-void sk1024_init_key(sk1024_ctx *ctx, const void *key, size_t klen, size_t hbits);
-void sk1024_init(sk1024_ctx *ctx, size_t hbits);
+void sk1024_init_key(sk1024_ctx *ctx);
+void sk1024_update_key(sk1024_ctx *ctx, const void *key, size_t klen);
+void sk1024_final_key(sk1024_ctx *ctx);
+void sk1024_init(sk1024_ctx *ctx, size_t bits, int with_key);
 void sk1024_update(sk1024_ctx *ctx, const void *msg, size_t l);
 void sk1024_final_pad(sk1024_ctx *ctx, void *outhash, short do_pad);
 void sk1024_final(sk1024_ctx *ctx, void *outhash);
-void sk1024(const void *src, size_t slen, void *dst, size_t hbits);
+void sk1024(const void *src, size_t slen, void *dst, size_t bits);
 
 #ifdef TF_NEED_MODES
 void tf1024_init(tf1024_ctx *ctx);

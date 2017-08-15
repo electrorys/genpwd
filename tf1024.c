@@ -403,31 +403,44 @@ static void sk1024_process_blk(sk1024_ctx *ctx, const uint8_t *in, size_t bnum, 
 	} while (--bnum);
 }
 
-void sk1024_init_key(sk1024_ctx *ctx, const void *key, size_t klen, size_t hbits)
+void sk1024_init_key(sk1024_ctx *ctx)
+{
+	memset(ctx, 0, sizeof(sk1024_ctx));
+
+	ctx->hl = TF_MAX_BITS;
+	ctx->bl = 0;
+	ctx->tfc.T[0] = 0;
+	ctx->tfc.T[1] = SKEIN_BLOCK_KEY | SKEIN_FLAG_FIRST;
+	memset(ctx->tfc.K, 0, sizeof(ctx->tfc.K));
+}
+
+void sk1024_update_key(sk1024_ctx *ctx, const void *key, size_t klen)
+{
+	sk1024_update(ctx, key, klen);
+}
+
+void sk1024_final_key(sk1024_ctx *ctx)
 {
 	uint64_t cfg[TF_BLOCK_UNITS];
 
-	memset(ctx, 0, sizeof(sk1024_ctx));
+	memset(cfg, 0, sizeof(cfg));
+	sk1024_final_pad(ctx, (void *)cfg, 1);
+	memcpy(ctx->tfc.K, cfg, sizeof(cfg));
+	data_to_le64(ctx->tfc.K, TF_KEY_SIZE);
+}
 
-	if (key && klen) {
-		ctx->hl = TF_MAX_BITS;
-		ctx->bl = 0;
-		ctx->tfc.T[0] = 0;
-		ctx->tfc.T[1] = SKEIN_BLOCK_KEY | SKEIN_FLAG_FIRST;
-		memset(ctx->tfc.K, 0, sizeof(ctx->tfc.K));
-		sk1024_update(ctx, key, klen);
-		sk1024_final_pad(ctx, (void *)cfg, 1);
-		memcpy(ctx->tfc.K, cfg, sizeof(cfg));
-		data_to_le64(ctx->tfc.K, TF_KEY_SIZE);
-	}
-	else memset(ctx->tfc.K, 0, sizeof(ctx->tfc.K));
+void sk1024_init(sk1024_ctx *ctx, size_t bits, int with_key)
+{
+	uint64_t cfg[TF_BLOCK_UNITS];
 
-	ctx->hl = hbits;
+	if (!with_key) memset(ctx, 0, sizeof(sk1024_ctx));
+
+	ctx->hl = bits;
 	ctx->bl = 0;
 
 	memset(cfg, 0, sizeof(cfg));
 	cfg[0] = htole64(((uint64_t) SKEIN_VERSION << 32) + SKEIN_ID);
-	cfg[1] = htole64(hbits);
+	cfg[1] = htole64(bits);
 
 	ctx->tfc.T[0] = 0;
 	ctx->tfc.T[1] = SKEIN_BLOCK_CFG | SKEIN_FLAG_FIRST | SKEIN_FLAG_LAST;
@@ -436,11 +449,6 @@ void sk1024_init_key(sk1024_ctx *ctx, const void *key, size_t klen, size_t hbits
 
 	ctx->tfc.T[0] = 0;
 	ctx->tfc.T[1] = SKEIN_BLOCK_MSG | SKEIN_FLAG_FIRST;
-}
-
-void sk1024_init(sk1024_ctx *ctx, size_t hbits)
-{
-	sk1024_init_key(ctx, NULL, 0, hbits);
 }
 
 void sk1024_update(sk1024_ctx *ctx, const void *msg, size_t l)
@@ -478,7 +486,7 @@ void sk1024_update(sk1024_ctx *ctx, const void *msg, size_t l)
 void sk1024_final_pad(sk1024_ctx *ctx, void *outhash, short do_pad)
 {
 	uint8_t *hash = outhash;
-	uint64_t key[TF_BLOCK_UNITS];
+	uint64_t key[TF_BLOCK_UNITS], *X;
 	size_t i, b, n;
 
 	if (ctx->bl < TF_BLOCK_SIZE)
@@ -497,7 +505,8 @@ void sk1024_final_pad(sk1024_ctx *ctx, void *outhash, short do_pad)
 	memcpy(key, ctx->tfc.K, sizeof(key));
 
 	for (i = 0; i * TF_BLOCK_SIZE < b; i++) {
-		((uint64_t *)ctx->B)[0] = htole64((uint64_t)i);
+		X = (uint64_t *)ctx->B;
+		X[0] = htole64((uint64_t)i);
 		ctx->tfc.T[0] = 0;
 		ctx->tfc.T[1] = SKEIN_BLOCK_OUT | SKEIN_FLAG_FIRST | SKEIN_FLAG_LAST;
 		ctx->bl = 0;
@@ -515,12 +524,12 @@ void sk1024_final(sk1024_ctx *ctx, void *outhash)
 	sk1024_final_pad(ctx, outhash, 0);
 }
 
-void sk1024(const void *src, size_t slen, void *dst, size_t hbits)
+void sk1024(const void *src, size_t slen, void *dst, size_t bits)
 {
 	sk1024_ctx ctx;
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
-	sk1024_init(&ctx, hbits);
+	sk1024_init(&ctx, bits, 0);
 	sk1024_update(&ctx, src, slen);
 	sk1024_final(&ctx, dst);
 
