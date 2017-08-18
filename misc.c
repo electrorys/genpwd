@@ -34,7 +34,7 @@ static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 	return 0;
 }
 
-static void genpwd_ub_handler(struct smalloc_pool *spool, void *offender)
+static void genpwd_ub_handler(struct smalloc_pool *spool, const void *offender)
 {
 	xerror(0, 1, "UB: %p is not from our data storage!", offender);
 }
@@ -44,7 +44,7 @@ static void genpwd_init_memory(void)
 	static int done;
 
 	if (!done) {
-		sm_set_bad_block_handler(genpwd_ub_handler);
+		sm_set_ub_handler(genpwd_ub_handler);
 		if (!sm_set_default_pool(
 		genpwd_memory_pool, sizeof(genpwd_memory_pool), 1, genpwd_oom_handler))
 			xerror(0, 1, "memory pool initialisation failed!");
