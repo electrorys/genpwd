@@ -37,6 +37,7 @@ void base95_encode(char *dst, const unsigned char *src, size_t count);
 void hash85(char *dst, const unsigned char *src, size_t len);
 void hash95(char *dst, const unsigned char *src, size_t len);
 
+void genpwd_init_memory(void);
 void genpwd_exit_memory(void);
 void genpwd_free(void *p);
 void *genpwd_malloc(size_t sz);
