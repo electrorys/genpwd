@@ -216,7 +216,7 @@ static void process_entries(void)
 		memset(shadowed, 0, sizeof(shadowed));
 		set_output_label_size(sizeof("(HIDDEN)")-1);
 		fl_set_object_label(outbox, "(HIDDEN)");
-		strncpy(shadowed, output, n);
+		xstrlcpy(shadowed, output, n);
 	}
 	else {
 		set_output_label_size(n);
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 				break;
 			case 'd':
 				memset(data, 0, sizeof(data));
-				strncpy(data, optarg, sizeof(data)-1);
+				xstrlcpy(data, optarg, sizeof(data));
 				break;
 			case 'U':
 				format_option = 0xff;

@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 				listids();
 				break;
 			case 'k':
-				strncpy(keyfile, optarg, sizeof(keyfile)-1);
+				xstrlcpy(keyfile, optarg, sizeof(keyfile));
 				break;
 			case '4':
 				format_option = 0x1004;
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 				break;
 			case 'd':
 				memset(data, 0, sizeof(data));
-				strncpy(data, optarg, sizeof(data)-1);
+				xstrlcpy(data, optarg, sizeof(data));
 				break;
 			case 'U':
 				format_option = 0xff;

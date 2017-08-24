@@ -248,7 +248,7 @@ static void addid_init(const char *id, char *initid)
 			}
 		}
 		memset(data+dsz, 0, n+1);
-		strncpy(data+dsz, id, n);
+		xstrlcpy(data+dsz, id, n);
 		*(ids+nids) = data+dsz;
 		dsz += n+1;
 	}

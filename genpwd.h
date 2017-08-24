@@ -18,6 +18,8 @@ extern const char testmaster[];
 extern const char testname[];
 extern const char testxpwd[];
 
+size_t xstrlcpy(char *dst, const char *src, size_t size);
+
 void mkpwd_adjust(void);
 
 int selftest(void);

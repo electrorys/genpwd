@@ -30,7 +30,7 @@ static void mkipv4(char *out, void *rnd, size_t rlen, const char *maskaddr)
 	if (*stoi || prefix < 0 || prefix > 32) goto _fail;
 
 	d = maskaddr;
-	strncpy(tmpaddr, d, s - d - 1);
+	xstrlcpy(tmpaddr, d, s - d);
 	if (inet_pton(AF_INET, tmpaddr, addr4) != 1) goto _fail;
 
 	if ((32 - prefix) % 8) {
@@ -73,7 +73,7 @@ static void mkipv6(char *out, void *rnd, size_t rlen, const char *maskaddr)
 	if (*stoi || prefix < 0 || prefix > 128) goto _fail;
 
 	d = maskaddr;
-	strncpy(tmpaddr, d, s - d - 1);
+	xstrlcpy(tmpaddr, d, s - d);
 	if (inet_pton(AF_INET6, tmpaddr, addr6) != 1) goto _fail;
 
 	if ((128 - prefix) % 8) {
@@ -117,7 +117,7 @@ static void mkmac(char *out, void *rnd, size_t rlen, const char *maskaddr)
 	if (*stoi || prefix < 0 || prefix > 48) goto _fail;
 
 	d = maskaddr;
-	strncpy(tmpaddr, d, s - d - 1);
+	xstrlcpy(tmpaddr, d, s - d);
 
 	if (sscanf(maskaddr, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
 		&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) < 6) goto _fail;
@@ -182,7 +182,8 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 	sk1024_ctx ctx;
 	unsigned char tmp[128];
 	int i;
-	static char ret[MKPWD_OUTPUT_MAX]; memset(ret, 0, sizeof(ret));
+	static char ret[MKPWD_OUTPUT_MAX];
+	memset(ret, 0, sizeof(ret));
 
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
@@ -202,9 +203,10 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 	sk1024_final(&ctx, tmp);
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
-	if (mkpwd_passes_number)
+	if (mkpwd_passes_number) {
 		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
 			sk1024(tmp, sizeof(tmp), tmp, TF_MAX_BITS);
+	}
 
 	if (mkpwd_output_format == 0) {
 		unsigned char b64test[MKPWD_OUTPUT_MAX];
@@ -276,32 +278,35 @@ char *mkpwd(const void *salt, size_t slen, const char **data)
 		goto _fastret;
 	}
 	else {
-		int i, d;
-		char tmpc[4] = {0};
+		char tmpc[4];
+		size_t d, x;
 
-		for (i = 0, d = 0; i < sizeof(tmp) && d < MKPWD_OUTPUT_MAX; i++)
+		for (i = 0, d = 0; i < sizeof(tmp) && d < MKPWD_OUTPUT_MAX; i++) {
+			memset(tmpc, 0, sizeof(tmpc));
 			switch (mkpwd_output_format) {
 			case 1:
 			default:
-				d+=snprintf(tmpc, 4, "%hhu", tmp[i]);
+				x = snprintf(tmpc, 4, "%hhu", tmp[i]);
 				if ((unsigned char)tmp[i] > 100) {
 					if (tmpc[0] == '1') tmpc[2]++;
 					if (tmpc[0] == '2') tmpc[2] += 2;
 					if (tmpc[2] > '9') tmpc[2] -= 10;
-					d--;
+					x--;
 				}
 				if (d > MKPWD_OUTPUT_MAX) continue;
-				strncat(ret,
+				xstrlcpy(ret+d,
 					(unsigned char)tmp[i] > 100 ? tmpc+1 : tmpc,
-					sizeof(ret) - strlen(ret));
+					sizeof(ret)-d);
+				d += x;
 				break;
 			case 2:
-				d+=snprintf(ret+d, 3, "%hhx", tmp[i]);
+				d += snprintf(ret+d, 3, "%hhx", tmp[i]);
 				break;
 			case 3:
-				d+=snprintf(ret+d, 4, "%hho", tmp[i]);
+				d += snprintf(ret+d, 4, "%hho", tmp[i]);
 				break;
 			}
+		}
 		memset(tmpc, 0, sizeof(tmpc));
 	}
 
@@ -352,9 +357,10 @@ void *mkpwbuf(const void *salt, size_t slen, const char **data)
 	sk1024_final(&ctx, ret);
 	memset(&ctx, 0, sizeof(sk1024_ctx));
 
-	if (mkpwd_passes_number)
+	if (mkpwd_passes_number) {
 		for (i = 0; i < mkpwd_passes_number && i < MKPWD_ROUNDS_MAX; i++)
 			sk1024(ret, mkpwd_password_length, ret, TF_TO_BITS(mkpwd_password_length));
+	}
 
 	return ret;
 }
