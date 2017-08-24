@@ -18,15 +18,16 @@
 #include "getpasswd.h"
 #include "defs.h"
 
-static char master[256] = {0}, name[256] = {0};
+static char master[256], name[256];
 static const char *d[] = {master, name, NULL, NULL};
-static char *pwdout = NULL;
-static int format_option = 0;
-static int no_newline = 0;
-static char keyfile[1024] = {0};
-static char data[128] = {0};
+static char *pwdout;
+static int format_option;
+static int no_newline;
+static char keyfile[1024];
+static char data[128];
+static int i, c;
 
-char *progname = NULL;
+char *progname;
 
 static char *stoi;
 
@@ -92,8 +93,6 @@ static int getps_plain_filter(struct getpasswd_state *getps, int chr, size_t pos
 
 int main(int argc, char **argv)
 {
-	int i, c;
-
 	progname = basename(argv[0]);
 
 	if (!selftest())

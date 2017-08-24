@@ -23,6 +23,7 @@ static Window win;
 static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static FL_OBJECT *search, *srchup, *srchdown;
+static FL_OBJECT *called;
 
 static FL_COLOR srchcol1, srchcol2;
 
@@ -32,6 +33,7 @@ static int format_option;
 static int do_not_show;
 static char data[128];
 static char shadowed[MKPWD_OUTPUT_MAX];
+static int c;
 
 char *progname;
 static char newtitle[64];
@@ -307,9 +309,6 @@ static void removeitem(void)
 
 int main(int argc, char **argv)
 {
-	int c;
-	FL_OBJECT *called = NULL;
-
 	progname = basename(argv[0]);
 
 	fl_malloc = genpwd_malloc;
