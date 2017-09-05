@@ -8,7 +8,7 @@ XFORMS_STATIC_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/
 
 SRCS = $(wildcard *.c)
 GENPWD_OBJS = $(filter-out xgenpwd.o, $(SRCS:.c=.o))
-XGENPWD_OBJS = $(filter-out genpwd.o, $(SRCS:.c=.o))
+XGENPWD_OBJS = $(filter-out genpwd.o getpasswd.o, $(SRCS:.c=.o))
 
 default: genpwd
 all: genpwd xgenpwd
