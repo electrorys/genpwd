@@ -216,7 +216,7 @@ static void process_entries(void)
 		memset(shadowed, 0, sizeof(shadowed));
 		set_output_label_size(sizeof("(HIDDEN)")-1);
 		fl_set_object_label(outbox, "(HIDDEN)");
-		xstrlcpy(shadowed, output, n);
+		xstrlcpy(shadowed, output, sizeof(shadowed));
 	}
 	else {
 		set_output_label_size(n);
