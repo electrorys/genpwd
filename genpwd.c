@@ -16,7 +16,7 @@
 
 #include "genpwd.h"
 #include "getpasswd.h"
-#include "defs.h"
+#include "genpwd_defs.h"
 
 static char master[256], name[256];
 static const char *d[] = {master, name, NULL, NULL};

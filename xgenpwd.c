@@ -14,7 +14,7 @@
 #include <libgen.h>
 #include <forms.h>
 #include "genpwd.h"
-#include "defs.h"
+#include "genpwd_defs.h"
 
 #define TITLE_SHOW_CHARS 16
 
