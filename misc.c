@@ -539,7 +539,10 @@ void stripchr(char *s, const char *rem)
 	while (*s) {
 		while (*rem) {
 			if (*s != *rem) add = 1;
-			else { add = 0; break; }
+			else {
+				add = 0;
+				break;
+			}
 			rem++;
 		}
 
