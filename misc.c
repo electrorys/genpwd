@@ -18,7 +18,7 @@ static char genpwd_memory_pool[65536];
 
 char **ids;
 int nids;
-static int need_to_save_ids;
+static int need_to_save_ids = SAVE_IDS_NEVER;
 
 static char *data = NULL;
 static size_t dsz = 0;
@@ -176,10 +176,12 @@ int iscomment(const char *s)
 	return 0;
 }
 
-void to_saveids(int x)
+int will_saveids(int x)
 {
-	if (need_to_save_ids == -1) return;
+	if (x == SAVE_IDS_QUERY) return need_to_save_ids;
+	if (need_to_save_ids == SAVE_IDS_NEVER && x != SAVE_IDS_OVERRIDE) goto _ret;
 	need_to_save_ids = x;
+_ret:	return need_to_save_ids;
 }
 
 int findid(const char *id)
@@ -232,13 +234,13 @@ static void addid_init(const char *id, char *initid)
 	if ((id && iscomment(id)) || (initid && iscomment(initid))) return;
 
 	ids = genpwd_realloc(ids, sizeof(char *) * (nids + 1));
-	if (!ids) to_saveids(-1);
+	if (!ids) will_saveids(SAVE_IDS_NEVER);
 
 	if (!initid) {
 		n = strlen(id);
 		old = data;
 		data = genpwd_realloc(data, dsz+n+1);
-		if (!data) to_saveids(-1);
+		if (!data) will_saveids(SAVE_IDS_NEVER);
 		if (data != old) {
 			for (x = 0; x < nids; x++) {
 				if (*(ids+x))
@@ -476,7 +478,7 @@ void listids(void)
 	int x;
 
 	loadids(NULL);
-	to_saveids(-1);
+	will_saveids(SAVE_IDS_NEVER);
 
 	if (!ids || !nids) printf("No ids found.\n");
 
@@ -494,7 +496,7 @@ void saveids(void)
 	char *s, *d;
 
 	if (!ids) goto out;
-	if (need_to_save_ids <= 0) goto out;
+	if (need_to_save_ids == SAVE_IDS_NEVER) goto out;
 
 	s = getenv("HOME");
 	if (!s) goto out;

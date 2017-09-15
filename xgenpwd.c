@@ -230,7 +230,7 @@ static void process_entries(void)
 
 	if (!is_dupid(d[1])) {
 		addid(d[1]);
-		to_saveids(1);
+		will_saveids(SAVE_IDS_PLEASE);
 		fl_addto_browser(idsbr, d[1]);
 	}
 
@@ -304,7 +304,7 @@ static void removeitem(void)
 
 	if (!delid(line)) return;
 	fl_delete_browser_line(idsbr, x);
-	to_saveids(1);
+	will_saveids(SAVE_IDS_PLEASE);
 }
 
 int main(int argc, char **argv)
@@ -318,6 +318,8 @@ int main(int argc, char **argv)
 
 	if (!selftest())
 		xerror(0, 1, "Self test failed. Program probably broken.");
+
+	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
 	while ((c = getopt(argc, argv, "xn:o:l:ODX89is:46md:UN")) != -1) {
@@ -375,7 +377,12 @@ int main(int argc, char **argv)
 				format_option = 0xff;
 				break;
 			case 'N':
-				to_saveids(-1);
+				if (genpwd_save_ids == 0) {
+					if (will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
+						will_saveids(SAVE_IDS_OVERRIDE);
+					else will_saveids(SAVE_IDS_NEVER);
+				}
+				will_saveids(SAVE_IDS_NEVER);
 				break;
 			case 'i':
 				listids();

@@ -7,6 +7,7 @@
 
 extern char *progname;
 
+extern const int genpwd_save_ids;
 extern const char genpwd_ids_fname[];
 #define genpwd_ids_magic "# _genpwd_ids file"
 
@@ -60,13 +61,18 @@ extern size_t _slen;
 void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 			unsigned int bits, unsigned int passes);
 
+#define SAVE_IDS_NEVER		-1 /* like -N */
+#define SAVE_IDS_QUERY		0 /* query status */
+#define SAVE_IDS_PLEASE		1 /* yes please write out */
+#define SAVE_IDS_OVERRIDE	2 /* if you'll not, I'll shoot you I promise! */
+
 int findid(const char *id);
 int delid(const char *id);
 int is_dupid(const char *id);
 void addid(const char *id);
 void loadids(ids_populate_fn idpfn);
 void listids(void);
-void to_saveids(int x);
+int will_saveids(int x);
 void saveids(void);
 
 #endif

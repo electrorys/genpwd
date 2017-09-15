@@ -98,6 +98,8 @@ int main(int argc, char **argv)
 	if (!selftest())
 		xerror(0, 1, "Self test failed. Program probably broken.");
 
+	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
+
 	opterr = 0;
 	while ((c = getopt(argc, argv, "n:o:l:ODX89is:LNk:46md:U")) != -1) {
 		switch (c) {
@@ -139,7 +141,12 @@ int main(int argc, char **argv)
 				no_newline = 1;
 				break;
 			case 'N':
-				to_saveids(-1);
+				if (genpwd_save_ids == 0) {
+					if (will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
+						will_saveids(SAVE_IDS_OVERRIDE);
+					else will_saveids(SAVE_IDS_NEVER);
+				}
+				will_saveids(SAVE_IDS_NEVER);
 				break;
 			case 'i':
 				listids();
@@ -201,7 +208,7 @@ int main(int argc, char **argv)
 	loadids(NULL);
 	if (!is_dupid(name)) {
 		addid(name);
-		to_saveids(1);
+		will_saveids(SAVE_IDS_PLEASE);
 	}
 
 	mkpwd_adjust();
