@@ -18,7 +18,7 @@ static char genpwd_memory_pool[65536];
 
 char **ids;
 int nids;
-static int need_to_save_ids = SAVE_IDS_NEVER;
+static int need_to_save_ids = -2; /* init to some nonsensical value */
 
 static char *data = NULL;
 static size_t dsz = 0;
@@ -496,7 +496,7 @@ void saveids(void)
 	char *s, *d;
 
 	if (!ids) goto out;
-	if (need_to_save_ids == SAVE_IDS_NEVER) goto out;
+	if (need_to_save_ids <= SAVE_IDS_NEVER) goto out;
 
 	s = getenv("HOME");
 	if (!s) goto out;
