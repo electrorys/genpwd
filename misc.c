@@ -522,10 +522,13 @@ void saveids(void)
 out:	if (ids) {
 		genpwd_free(ids);
 		ids = NULL;
+		nids = 0;
 	}
 	if (data) {
 		memset(data, 0, dsz);
 		genpwd_free(data);
+		data = NULL;
+		dsz = 0;
 	}
 	if (f) fclose(f);
 }

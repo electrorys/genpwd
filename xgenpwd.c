@@ -22,7 +22,7 @@ static FL_FORM *form;
 static Window win;
 static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
-static FL_OBJECT *search, *srchup, *srchdown;
+static FL_OBJECT *search, *srchup, *srchdown, *reloadids;
 static FL_OBJECT *called;
 
 static FL_COLOR srchcol1, srchcol2;
@@ -163,6 +163,14 @@ static void searchitemdown(void)
 			return;
 		}
 	}
+}
+
+static void reload_ids(void)
+{
+	saveids(); /* save modified, if any, clean things up */
+	fl_clear_browser(idsbr); /* clear browser */
+	loadids(fill_list); /* reload list again */
+	fl_set_browser_topline(idsbr, 1);
 }
 
 static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
@@ -429,13 +437,15 @@ int main(int argc, char **argv)
 	loadids(fill_list);
 	fl_set_browser_topline(idsbr, 1);
 
-	search = fl_add_input(FL_NORMAL_INPUT, 5, 270, 210, 25, NULL);
+	search = fl_add_input(FL_NORMAL_INPUT, 5, 270, 180, 25, NULL);
 	fl_set_object_return(search, FL_RETURN_CHANGED);
 	fl_get_object_color(search, &srchcol1, &srchcol2);
-	srchup = fl_add_button(FL_NORMAL_BUTTON, 220, 270, 25, 25, "@8>");
+	srchup = fl_add_button(FL_NORMAL_BUTTON, 190, 270, 25, 25, "@8>");
 	fl_set_object_shortcut(srchup, "^P", 0);
-	srchdown = fl_add_button(FL_NORMAL_BUTTON, 250, 270, 25, 25, "@2>");
+	srchdown = fl_add_button(FL_NORMAL_BUTTON, 220, 270, 25, 25, "@2>");
 	fl_set_object_shortcut(srchdown, "^N", 0);
+	reloadids = fl_add_button(FL_NORMAL_BUTTON, 250, 270, 25, 25, "R");
+	fl_set_object_shortcutkey(reloadids, XK_F5);
 
 	outbox = fl_add_box(FL_SHADOW_BOX, 5, 300, 270, 50, " -- ");
 	fl_set_object_lstyle(outbox, FL_FIXED_STYLE|FL_BOLD_STYLE);
@@ -492,6 +502,8 @@ int main(int argc, char **argv)
 			searchitemup();
 		else if (called == srchdown)
 			searchitemdown();
+		else if (called == reloadids)
+			reload_ids();
 		else if (called == quitbutton) break;
 	} while ((called = fl_do_forms()));
 
