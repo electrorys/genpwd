@@ -1,3 +1,5 @@
+const char genpwd_ids_fname[] = ".genpwd.ids";
+
 const unsigned char salt[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
 
 #ifdef _SELFTEST_CURRENT

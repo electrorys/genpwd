@@ -5,9 +5,10 @@
 #include "mkpwd.h"
 #include "tf1024.h"
 
-#define _genpwd_ids ".genpwd.ids"
-
 extern char *progname;
+
+extern const char genpwd_ids_fname[];
+#define genpwd_ids_magic "# _genpwd_ids file"
 
 extern const unsigned char salt[];
 extern int default_password_length;

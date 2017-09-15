@@ -14,8 +14,6 @@
 #include "tf1024.h"
 #include "smalloc.h"
 
-#define _identifier "# _genpwd_ids file"
-
 static char genpwd_memory_pool[65536];
 
 char **ids;
@@ -356,7 +354,7 @@ static int decrypt_ids(FILE *f, char **data, size_t *dsz)
 	memset(ctr, 0, sizeof(ctr));
 	memset(ret+n, 0, sizeof(ctr));
 
-	if (strncmp(ret, _identifier, sizeof(_identifier)-1) != 0)
+	if (strncmp(ret, genpwd_ids_magic, sizeof(genpwd_ids_magic)-1) != 0)
 		goto err;
 
 	tf1024_done(&tctx);
@@ -424,9 +422,9 @@ static void alloc_fheader(void)
 {
 	if (data && dsz) return;
 
-	data = genpwd_malloc(sizeof(_identifier));
-	memcpy(data, _identifier, sizeof(_identifier));
-	dsz = sizeof(_identifier);
+	data = genpwd_malloc(sizeof(genpwd_ids_magic));
+	memcpy(data, genpwd_ids_magic, sizeof(genpwd_ids_magic));
+	dsz = sizeof(genpwd_ids_magic);
 }
 
 void loadids(ids_populate_fn idpfn)
@@ -443,7 +441,7 @@ void loadids(ids_populate_fn idpfn)
 	if (!ids) return;
 
 	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", s, _genpwd_ids);
+	snprintf(path, PATH_MAX-1, "%s/%s", s, genpwd_ids_fname);
 
 	f = fopen(path, "r");
 	if (!f) {
@@ -502,7 +500,7 @@ void saveids(void)
 	if (!s) goto out;
 
 	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", s, _genpwd_ids);
+	snprintf(path, PATH_MAX-1, "%s/%s", s, genpwd_ids_fname);
 
 	f = fopen(path, "w");
 	if (!f) goto out;
