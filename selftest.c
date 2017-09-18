@@ -3,20 +3,20 @@
 #include "genpwd.h"
 #include "mkpwd.h"
 
-typedef struct {
+struct pwdtest {
 	const char *master;
 	const unsigned char *salt; size_t slen;
 	const char *name;
 	int passes_number, string_offset, password_length;
 	const char *xpwd;
-} pwdtest_t;
+};
 
 int selftest(void)
 {
 	int i, ret = 1;
 	const char *d[] = {NULL, NULL, NULL};
 	char *xpwd = NULL;
-	pwdtest_t ptst[3];
+	struct pwdtest ptst[3];
 	const unsigned char salt0[] = {0xa6, 0x5d, 0x7f, 0x7e};
 	const unsigned char salt1[] = {0xd1, 0x23, 0xbb, 0x35, 0xa9, 0x92, 0x78, 0x42, 0xca, 0x8d};
 
@@ -35,7 +35,7 @@ int selftest(void)
 #ifdef _SELFTEST_CURRENT
 #undef _SELFTEST_CURRENT
 	ptst[2].master = testmaster; ptst[2].name = testname;
-	ptst[2].salt = salt; ptst[2].slen = _slen;
+	ptst[2].salt = salt; ptst[2].slen = salt_length;
 	ptst[2].passes_number = default_passes_number; ptst[2].string_offset = default_string_offset; ptst[2].password_length = default_password_length;
 	ptst[2].xpwd = testxpwd;
 #endif

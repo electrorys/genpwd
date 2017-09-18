@@ -40,7 +40,7 @@ static char newtitle[64];
 
 static char *stoi;
 
-size_t _slen = sizeof(salt);
+size_t salt_length = sizeof(salt);
 
 static void usage(void)
 {
@@ -51,7 +51,7 @@ static void usage(void)
 	}
 
 	printf("usage: %s [-xODX8946mdUNi] [-n PASSES] [-o OFFSET]"
-		" [-l PASSLEN] [-s filename/-]\n\n", progname);
+		" [-l PASSLEN] [-s filename/-] [-I idsfile]\n\n", progname);
 	printf("  -x: do not show password in output box. 'Copy' button will work.\n");
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
@@ -65,6 +65,7 @@ static void usage(void)
 	printf("  -U: output a UUID\n");
 	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -i: list identifiers from .genpwd.ids\n");
+	printf("  -I file: use alternate ids file instead of .genpwd.ids\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
@@ -207,9 +208,9 @@ static void process_entries(void)
 	d[0] = password; d[1] = fl_get_input(name); d[2] = NULL;
 	if (!d[1][0]) return;
 	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
-	output = mkpwd(_salt, _slen, d);
+	output = mkpwd(loaded_salt, salt_length, d);
 
-	fmt = mkpwd_hint(_salt, _slen, password);
+	fmt = mkpwd_hint(loaded_salt, salt_length, password);
 	fl_set_object_label(mhashbox, fmt);
 	memset(fmt, 0, 4);
 
@@ -330,7 +331,7 @@ int main(int argc, char **argv)
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "xn:o:l:ODX89is:46md:UN")) != -1) {
+	while ((c = getopt(argc, argv, "xn:o:l:ODX89iI:s:46md:UN")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
 				format_option = 5;
 				break;
 			case 's':
-				loadsalt(optarg, &_salt, &_slen);
+				loadsalt(optarg, &loaded_salt, &salt_length);
 				break;
 			case '4':
 				format_option = 0x1004;
@@ -394,6 +395,11 @@ int main(int argc, char **argv)
 				break;
 			case 'i':
 				listids();
+				break;
+			case 'I':
+				/* will be erased later */
+				genpwd_ids_filename = genpwd_strdup(optarg);
+				if (!genpwd_ids_filename) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'x':
 				do_not_show = 1;

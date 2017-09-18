@@ -45,8 +45,10 @@ void genpwd_init_memory(void);
 void genpwd_exit_memory(void);
 void genpwd_free(void *p);
 void *genpwd_malloc(size_t sz);
+void *genpwd_zalloc(size_t sz);
 void *genpwd_calloc(size_t nm, size_t sz);
 void *genpwd_realloc(void *p, size_t newsz);
+char *genpwd_strdup(const char *s);
 
 void xerror(int noexit, int noerrno, const char *fmt, ...);
 void daemonise(void);
@@ -55,8 +57,8 @@ extern char **ids;
 extern int nids;
 typedef void (*ids_populate_fn)(const char *str);
 
-extern const unsigned char *_salt;
-extern size_t _slen;
+extern const unsigned char *loaded_salt;
+extern size_t salt_length;
 
 void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 			unsigned int bits, unsigned int passes);
@@ -65,6 +67,8 @@ void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
 #define SAVE_IDS_QUERY		0 /* query status */
 #define SAVE_IDS_PLEASE		1 /* yes please write out */
 #define SAVE_IDS_OVERRIDE	2 /* if you'll not, I'll shoot you I promise! */
+
+extern char *genpwd_ids_filename; /* if set - open this file instead of default genpwd_ids_fname. */
 
 int findid(const char *id);
 int delid(const char *id);

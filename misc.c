@@ -23,8 +23,8 @@ static int need_to_save_ids = -2; /* init to some nonsensical value */
 static char *data = NULL;
 static size_t dsz = 0;
 
-const unsigned char *_salt = salt;
-extern size_t _slen;
+const unsigned char *loaded_salt = salt;
+extern size_t salt_length;
 
 static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 {
@@ -69,6 +69,12 @@ void *genpwd_malloc(size_t sz)
 	return sm_malloc(sz);
 }
 
+void *genpwd_zalloc(size_t sz)
+{
+	if (!genpwd_memory_initialised) genpwd_init_memory();
+	return sm_zalloc(sz);
+}
+
 void *genpwd_calloc(size_t nm, size_t sz)
 {
 	if (!genpwd_memory_initialised) genpwd_init_memory();
@@ -79,6 +85,15 @@ void *genpwd_realloc(void *p, size_t newsz)
 {
 	if (!genpwd_memory_initialised) genpwd_init_memory();
 	return sm_realloc(p, newsz);
+}
+
+char *genpwd_strdup(const char *s)
+{
+	size_t n = strlen(s);
+	char *r = genpwd_zalloc(n+1);
+	if (!r) return NULL;
+	memcpy(r, s, n);
+	return r;
 }
 
 void genpwd_getrandom(void *buf, size_t size)
@@ -292,7 +307,7 @@ static void prepare_context(tf1024_ctx *tctx, const void *ctr)
 
 	mkpwd_adjust();
 
-	sk1024(_salt, _slen, key, TF_MAX_BITS);
+	sk1024(loaded_salt, salt_length, key, TF_MAX_BITS);
 	if (mkpwd_passes_number > 1)
 		sk1024_loop(key, TF_KEY_SIZE, key, TF_MAX_BITS, mkpwd_passes_number);
 	tf1024_init(tctx);
@@ -429,6 +444,8 @@ static void alloc_fheader(void)
 	dsz = sizeof(genpwd_ids_magic);
 }
 
+char *genpwd_ids_filename;
+
 void loadids(ids_populate_fn idpfn)
 {
 	char path[PATH_MAX];
@@ -436,16 +453,22 @@ void loadids(ids_populate_fn idpfn)
 	char *s, *d, *t;
 	int x;
 
-	s = getenv("HOME");
-	if (!s) return;
+	if (!genpwd_ids_filename) {
+		s = getenv("HOME");
+		if (!s) return;
+		snprintf(path, sizeof(path), "%s/%s", s, genpwd_ids_fname);
+		t = path;
+	}
+	else t = genpwd_ids_filename;
 
 	ids = genpwd_malloc(sizeof(char *));
-	if (!ids) return;
+	if (!ids) {
+		if (t == path) memset(path, 0, sizeof(path));
+		return;
+	}
 
-	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", s, genpwd_ids_fname);
-
-	f = fopen(path, "r");
+	f = fopen(t, "r");
+	if (t == path) memset(path, 0, sizeof(path));
 	if (!f) {
 		alloc_fheader();
 		return;
@@ -456,8 +479,6 @@ void loadids(ids_populate_fn idpfn)
 		alloc_fheader();
 		goto err;
 	}
-
-	memset(path, 0, sizeof(path));
 
 	s = d = data; t = NULL; x = 0;
 	while ((s = strtok_r(d, "\n", &t))) {
@@ -493,21 +514,22 @@ void saveids(void)
 {
 	char path[PATH_MAX];
 	FILE *f = NULL;
-	char *s, *d;
+	char *s, *d, *t;
 
 	if (!ids) goto out;
 	if (need_to_save_ids <= SAVE_IDS_NEVER) goto out;
 
-	s = getenv("HOME");
-	if (!s) goto out;
+	if (!genpwd_ids_filename) {
+		s = getenv("HOME");
+		if (!s) goto out;
+		snprintf(path, sizeof(path), "%s/%s", s, genpwd_ids_fname);
+		t = path;
+	}
+	else t = genpwd_ids_filename;
 
-	memset(path, 0, sizeof(path));
-	snprintf(path, PATH_MAX-1, "%s/%s", s, genpwd_ids_fname);
-
-	f = fopen(path, "w");
+	f = fopen(t, "w");
+	if (t == path) memset(path, 0, sizeof(path));
 	if (!f) goto out;
-
-	memset(path, 0, sizeof(path));
 
 	s = d = data;
 	remove_deadids(data, &dsz);

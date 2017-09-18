@@ -31,7 +31,7 @@ char *progname;
 
 static char *stoi;
 
-size_t _slen = sizeof(salt);
+size_t salt_length = sizeof(salt);
 
 static struct getpasswd_state getps;
 
@@ -43,7 +43,7 @@ static void usage(void)
 	}
 
 	printf("usage: %s [-rODX8946mdULNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-		" [-s/k filename/-]\n\n", progname);
+		" [-s/k filename/-] [-I idsfile]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -57,6 +57,7 @@ static void usage(void)
 	printf("  -L: omit newline when printing password\n");
 	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -i: list identifiers from .genpwd.ids\n");
+	printf("  -I file: use alternate ids file instead of .genpwd.ids\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
 	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
@@ -101,7 +102,7 @@ int main(int argc, char **argv)
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89is:LNk:46md:U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89iI:s:LNk:46md:U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
 				format_option = 5;
 				break;
 			case 's':
-				loadsalt(optarg, &_salt, &_slen);
+				loadsalt(optarg, &loaded_salt, &salt_length);
 				break;
 			case 'L':
 				no_newline = 1;
@@ -150,6 +151,11 @@ int main(int argc, char **argv)
 				break;
 			case 'i':
 				listids();
+				break;
+			case 'I':
+				/* will be erased later */
+				genpwd_ids_filename = genpwd_strdup(optarg);
+				if (!genpwd_ids_filename) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'k':
 				xstrlcpy(keyfile, optarg, sizeof(keyfile));
@@ -192,7 +198,7 @@ int main(int argc, char **argv)
 	if (xgetpasswd(&getps) == (size_t)-1) return 1;
 	memset(&getps, 0, sizeof(struct getpasswd_state));
 
-	pwdout = mkpwd_hint(_salt, _slen, master);
+	pwdout = mkpwd_hint(loaded_salt, salt_length, master);
 	fprintf(stderr, "Password hint: %s\n", pwdout);
 	memset(pwdout, 0, 4);
 
@@ -216,7 +222,7 @@ int main(int argc, char **argv)
 	mkpwd_output_format = format_option;
 	if (!keyfile[0]) {
 		if (format_option >= 0x1001 && format_option <= 0x1006) d[2] = data;
-		pwdout = mkpwd(_salt, _slen, d);
+		pwdout = mkpwd(loaded_salt, salt_length, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
@@ -236,7 +242,7 @@ int main(int argc, char **argv)
 				xerror(0, 0, keyfile);
 		}
 
-		pwdout = mkpwbuf(_salt, _slen, d);
+		pwdout = mkpwbuf(loaded_salt, salt_length, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
