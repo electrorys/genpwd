@@ -23,9 +23,10 @@ static const char *d[] = {master, name, NULL, NULL};
 static char *pwdout;
 static int format_option;
 static int no_newline;
-static char keyfile[1024];
-static char data[128];
-static int i, c;
+static char *fkeyname;
+static int genkeyf;
+static char *data;
+static int i, c, kfd = 1;
 
 char *progname;
 
@@ -42,8 +43,8 @@ static void usage(void)
 		exit(0);
 	}
 
-	printf("usage: %s [-rODX8946mdULNi] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-		" [-s/k filename/-] [-I idsfile]\n\n", progname);
+	printf("usage: %s [-rODX8946mdULNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+		" [-s filename] [-I idsfile] [-w outkey]\n\n", progname);
 	printf("  -O: output only numeric octal password\n");
 	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
 	printf("  -X: output hexadecimal password\n");
@@ -54,17 +55,16 @@ static void usage(void)
 	printf("  -m: output a mac address\n");
 	printf("  -d data: provide optional data for -46m options\n");
 	printf("  -U: output a UUID\n");
+	printf("  -k: request generation of binary keyfile\n");
 	printf("  -L: omit newline when printing password\n");
 	printf("  -N: do not save ID data typed in Name field\n");
 	printf("  -i: list identifiers from .genpwd.ids\n");
 	printf("  -I file: use alternate ids file instead of .genpwd.ids\n");
 	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
 	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
-	printf("  -l PASSLEN: with offset, sets the region of passwd substring from"
-	       	" 'big-passwd' string\n");
-	printf("  -s filename: load alternative binary salt from filename"
-	       	" or stdin (if '-')\n");
-	printf("  -k filename: generate a keyfile instead of password\n\n");
+	printf("  -l PASSLEN: sets the cut-out region of 'big-passwd' string\n");
+	printf("  -s filename: load alternative binary salt from filename\n");
+	printf("  -w outkey: write key or password to this file\n\n");
 	exit(1);
 }
 
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89iI:s:LNk:46md:U")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89iI:s:LNkw:46md:U")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 				break;
 			case 'l':
 				default_password_length = strtol(optarg, &stoi, 10);
-				if (!keyfile[0]
+				if (!fkeyname
 				&& (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX))
 					xerror(0, 1, "%s: password length must be between 1 and %u", optarg, MKPWD_OUTPUT_MAX);
 				break;
@@ -154,27 +154,41 @@ int main(int argc, char **argv)
 				break;
 			case 'I':
 				/* will be erased later */
+				if (genpwd_ids_filename) genpwd_free(genpwd_ids_filename);
 				genpwd_ids_filename = genpwd_strdup(optarg);
 				if (!genpwd_ids_filename) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'k':
-				xstrlcpy(keyfile, optarg, sizeof(keyfile));
+				if (!fkeyname) xerror(0, 1, "specify outkey with -w.");
+				genkeyf = 1;
+				break;
+			case 'w':
+				if (fkeyname) genpwd_free(fkeyname);
+				fkeyname = genpwd_strdup(optarg);
+				if (!fkeyname) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case '4':
 				format_option = 0x1004;
-				strcpy(data, "0.0.0.0/0");
+				if (data) genpwd_free(data);
+				data = genpwd_strdup("0.0.0.0/0");
+				if (!data) xerror(0, 0, "strdup");
 				break;
 			case '6':
 				format_option = 0x1006;
-				strcpy(data, "::/0");
+				if (data) genpwd_free(data);
+				data = genpwd_strdup("::/0");
+				if (!data) xerror(0, 0, "strdup");
 				break;
 			case 'm':
 				format_option = 0x1001;
-				strcpy(data, "0:0:0:0:0:0.0");
+				if (data) genpwd_free(data);
+				data = genpwd_strdup("0:0:0:0:0:0.0");
+				if (!data) xerror(0, 0, "strdup");
 				break;
 			case 'd':
-				memset(data, 0, sizeof(data));
-				xstrlcpy(data, optarg, sizeof(data));
+				if (data) genpwd_free(data);
+				data = genpwd_strdup(optarg);
+				if (!data) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'U':
 				format_option = 0xff;
@@ -219,39 +233,36 @@ int main(int argc, char **argv)
 
 	mkpwd_adjust();
 
+	if (fkeyname) {
+		if (!(!strcmp(fkeyname, "-")))
+			kfd = open(fkeyname, O_WRONLY | O_CREAT | O_LARGEFILE | O_TRUNC, 0666);
+		if (kfd == -1) xerror(0, 0, fkeyname);
+		if (kfd != 1) if (fchmod(kfd, S_IRUSR | S_IWUSR) != 0)
+			xerror(0, 0, "chmod of %s failed", fkeyname);
+		if (kfd != 1) no_newline = 1;
+	}
+
 	mkpwd_output_format = format_option;
-	if (!keyfile[0]) {
+	if (!genkeyf) {
 		if (format_option >= 0x1001 && format_option <= 0x1006) d[2] = data;
 		pwdout = mkpwd(loaded_salt, salt_length, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
-	
-		no_newline ? printf("%s", pwdout) : printf("%s\n", pwdout);
-		fflush(stdout);
+		write(kfd, pwdout, strlen(pwdout));
+		if (!no_newline) write(kfd, "\n", 1);
 		memset(pwdout, 0, MKPWD_OUTPUT_MAX); pwdout = NULL;
 	}
 	else {
-		FILE *f;
-
-		if (!strcmp(keyfile, "-")) f = stdout;
-		else {
-			f = fopen(keyfile, "wb");
-			if (!f) xerror(0, 0, keyfile);
-			if (fchmod(fileno(f), S_IRUSR | S_IWUSR) != 0)
-				xerror(0, 0, keyfile);
-		}
-
 		pwdout = mkpwbuf(loaded_salt, salt_length, d);
 		memset(master, 0, sizeof(master));
 		memset(name, 0, sizeof(name));
 		if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
-
-		fwrite(pwdout, default_password_length, 1, f);
-		fclose(f);
-		memset(pwdout, 0, default_password_length);
-		genpwd_free(pwdout);
+		write(kfd, pwdout, default_password_length);
+		genpwd_free(pwdout); /* will erase automatically */
 	}
+
+	if (kfd != 1) close(kfd);
 
 	saveids();
 
