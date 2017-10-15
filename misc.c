@@ -155,33 +155,6 @@ void xerror(int noexit, int noerrno, const char *fmt, ...)
 	exit(2);
 }
 
-void daemonise(void)
-{
-#ifdef DAEMONISE
-	pid_t pid, sid;
-	int i;
-
-	pid = fork();
-	if (pid < 0)
-		exit(-1);
-	if (pid > 0)
-		exit(0);
-
-	sid = setsid();
-	if (sid < 0)
-		exit(-1);
-
-	close(0);
-	close(1);
-	close(2);
-	for (i = 0; i < 3; i++)
-		open("/dev/null", O_RDWR);
-#else
-	return;
-#endif
-}
-
-
 int iscomment(const char *s)
 {
 	if (!*s

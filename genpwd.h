@@ -51,7 +51,6 @@ void *genpwd_realloc(void *p, size_t newsz);
 char *genpwd_strdup(const char *s);
 
 void xerror(int noexit, int noerrno, const char *fmt, ...);
-void daemonise(void);
 
 extern char **ids;
 extern int nids;

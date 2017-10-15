@@ -465,8 +465,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	daemonise();
-
 	fl_set_border_width(-1);
 	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
