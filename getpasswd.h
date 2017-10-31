@@ -8,7 +8,7 @@
 struct getpasswd_state;
 struct termios;
 
-typedef int (*getpasswd_filt)(struct getpasswd_state *, int, size_t);
+typedef int (*getpasswd_filt)(struct getpasswd_state *, char, size_t);
 
 struct getpasswd_state {
 	char *passwd;

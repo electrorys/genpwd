@@ -68,7 +68,7 @@ static void usage(void)
 	exit(1);
 }
 
-static int getps_filter(struct getpasswd_state *getps, int chr, size_t pos)
+static int getps_filter(struct getpasswd_state *getps, char chr, size_t pos)
 {
 	if (chr == '\x03') { /* ^C */
 		getps->retn = NOSIZE;
@@ -85,7 +85,7 @@ static inline int isctrlchr(int c)
 	return 0;
 }
 
-static int getps_plain_filter(struct getpasswd_state *getps, int chr, size_t pos)
+static int getps_plain_filter(struct getpasswd_state *getps, char chr, size_t pos)
 {
 	if (pos < getps->pwlen && !isctrlchr(chr))
 		write(getps->efd, &chr, sizeof(char));
