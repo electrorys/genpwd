@@ -91,7 +91,7 @@ static void usage(void)
 static int getps_filter(struct getpasswd_state *getps, int chr, size_t pos)
 {
 	if (chr == '\x03') { /* ^C */
-		getps->retn = (size_t)-1;
+		getps->retn = NOSIZE;
 		return 6;
 	}
 	return 1;
@@ -480,7 +480,7 @@ int main(int argc, char **argv)
 		getps.echo = "Enter master: ";
 		getps.charfilter = getps_filter;
 		getps.maskchar = 'x';
-		if (xgetpasswd(&getps) == (size_t)-1) return 1;
+		if (xgetpasswd(&getps) == NOSIZE) return 1;
 		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		pwdout = mkpwd_hint(loaded_salt, salt_length, s_master);
@@ -493,7 +493,7 @@ int main(int argc, char **argv)
 		getps.echo = "Enter name: ";
 		getps.charfilter = getps_plain_filter;
 		getps.maskchar = 0;
-		if (xgetpasswd(&getps) == (size_t)-1) return 1;
+		if (xgetpasswd(&getps) == NOSIZE) return 1;
 		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		loadids(NULL);

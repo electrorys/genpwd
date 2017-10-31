@@ -5,6 +5,8 @@
 #include "mkpwd.h"
 #include "tf1024.h"
 
+#define NOSIZE ((size_t)-1)
+
 extern char *progname;
 
 extern const int genpwd_save_ids;
