@@ -9,6 +9,7 @@
 void sm_free_pool(struct smalloc_pool *spool, void *p)
 {
 	struct smalloc_hdr *shdr;
+	char *s;
 
 	if (!smalloc_verify_pool(spool)) {
 		errno = EINVAL;
@@ -20,8 +21,15 @@ void sm_free_pool(struct smalloc_pool *spool, void *p)
 	shdr = USER_TO_HEADER(p);
 	if (smalloc_is_alloc(spool, shdr)) {
 		if (spool->do_zero) memset(p, 0, shdr->rsz);
+		s = CHAR_PTR(p);
+		s += shdr->usz;
+		memset(s, 0, HEADER_SZ);
+		if (spool->do_zero) memset(s+HEADER_SZ, 0, shdr->rsz - shdr->usz);
 		memset(shdr, 0, HEADER_SZ);
-		if (!spool->do_zero) memcpy(shdr, "FREED MEMORY", 12);
+		if (!spool->do_zero) {
+			memcpy(shdr, "FREED MEMORY", 12);
+			memcpy(s, "FREEDBARRIER", 12);
+		}
 		return;
 	}
 
