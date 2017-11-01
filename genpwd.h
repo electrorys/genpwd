@@ -52,6 +52,8 @@ void *genpwd_calloc(size_t nm, size_t sz);
 void *genpwd_realloc(void *p, size_t newsz);
 char *genpwd_strdup(const char *s);
 
+void genpwd_getrandom(void *buf, size_t size);
+
 void xerror(int noexit, int noerrno, const char *fmt, ...);
 
 extern char **ids;
