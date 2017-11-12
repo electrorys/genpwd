@@ -527,7 +527,7 @@ int main(int argc, char **argv)
 
 		if (!(!strcmp(fkeyname, "-")))
 			kfd = open(fkeyname, O_WRONLY | O_CREAT | O_LARGEFILE | O_TRUNC, 0666);
-		if (kfd == -1) xerror(0, 0, fkeyname);
+		if (kfd == -1) xerror(0, 0, "%s", fkeyname);
 		if (kfd != 1) if (fchmod(kfd, S_IRUSR | S_IWUSR) != 0)
 			xerror(0, 0, "chmod of %s failed", fkeyname);
 		if (kfd != 1) no_newline = 1;
@@ -538,7 +538,7 @@ int main(int argc, char **argv)
 			pwdout = mkpwd(loaded_salt, salt_length, d);
 			memset(s_master, 0, sizeof(s_master));
 			memset(s_name, 0, sizeof(s_name));
-			if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
+			if (!pwdout[0] && pwdout[1]) xerror(0, 1, "%s", pwdout+1);
 			write(kfd, pwdout, strlen(pwdout));
 			if (!no_newline) write(kfd, "\n", 1);
 			memset(pwdout, 0, MKPWD_OUTPUT_MAX); pwdout = NULL;
@@ -547,7 +547,7 @@ int main(int argc, char **argv)
 			pwdout = mkpwbuf(loaded_salt, salt_length, d);
 			memset(s_master, 0, sizeof(s_master));
 			memset(s_name, 0, sizeof(s_name));
-			if (!pwdout[0] && pwdout[1]) xerror(0, 1, pwdout+1);
+			if (!pwdout[0] && pwdout[1]) xerror(0, 1, "%s", pwdout+1);
 			write(kfd, pwdout, default_password_length);
 			genpwd_free(pwdout); /* will erase automatically */
 		}

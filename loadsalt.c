@@ -11,7 +11,7 @@ void loadsalt(const char *fname, const unsigned char **P, size_t *B)
 
 	if (!strcmp(fname, "-")) { f = stdin; goto _noopen; }
 	f = fopen(fname, "rb");
-	if (!f) xerror(0, 0, fname);
+	if (!f) xerror(0, 0, "%s", fname);
 
 _noopen:
 	p = genpwd_malloc(B ? *B : 1);
