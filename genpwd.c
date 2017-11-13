@@ -87,6 +87,11 @@ static inline int isctrlchr(int c)
 
 static int getps_plain_filter(struct getpasswd_state *getps, char chr, size_t pos)
 {
+	int x;
+
+	x = getps_filter(getps, chr, pos);
+	if (x != 1) return x;
+
 	if (pos < getps->pwlen && !isctrlchr(chr))
 		write(getps->efd, &chr, sizeof(char));
 	return 1;
