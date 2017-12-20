@@ -61,7 +61,7 @@ static void usage(void)
 	if (optopt == 'V') {
 		printf("genpwd passwords keeper.\n");
 		printf("Version %s, X11 XForms port.\n", _GENPWD_VERSION);
-		exit(0);
+		genpwd_exit(0);
 	}
 
 	printf("usage: %s [-xGODX8946mdUNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
@@ -87,7 +87,7 @@ static void usage(void)
 	printf("  -l PASSLEN: sets the cut-out region of 'big-passwd' string\n");
 	printf("  -s filename: load alternative binary salt from filename\n");
 	printf("  -w outkey: write key or password to this file\n\n");
-	exit(1);
+	genpwd_exit(1);
 }
 
 static int getps_filter(struct getpasswd_state *getps, char chr, size_t pos)
@@ -378,6 +378,7 @@ static void removeitem(void)
 
 int main(int argc, char **argv)
 {
+	install_signals();
 	progname = basename(argv[0]);
 
 	fl_malloc = genpwd_malloc;
@@ -506,7 +507,7 @@ int main(int argc, char **argv)
 		getps.echo = "Enter master: ";
 		getps.charfilter = getps_filter;
 		getps.maskchar = 'x';
-		if (xgetpasswd(&getps) == NOSIZE) return 1;
+		if (xgetpasswd(&getps) == NOSIZE) xerror(0, 0, "getting passwd");
 		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		pwdout = mkpwd_hint(loaded_salt, salt_length, s_master);
@@ -519,7 +520,7 @@ int main(int argc, char **argv)
 		getps.echo = "Enter name: ";
 		getps.charfilter = getps_plain_filter;
 		getps.maskchar = 0;
-		if (xgetpasswd(&getps) == NOSIZE) return 1;
+		if (xgetpasswd(&getps) == NOSIZE) xerror(0, 0, "getting name");
 		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		loadids(NULL);
@@ -561,8 +562,7 @@ int main(int argc, char **argv)
 
 		saveids();
 
-		genpwd_exit_memory();
-
+		genpwd_exit(0);
 		return 0;
 	}
 
@@ -670,7 +670,6 @@ int main(int argc, char **argv)
 	if (!do_not_grab) grab_keyboard(0);
 	fl_finish();
 
-	genpwd_exit_memory();
-
+	genpwd_exit(0);
 	return 0;
 }

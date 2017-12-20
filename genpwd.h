@@ -1,13 +1,20 @@
 #ifndef _GENPWD_H
 #define _GENPWD_H
 
+#include <signal.h>
 #include <stdint.h>
 #include "mkpwd.h"
 #include "tf1024.h"
 
 #define NOSIZE ((size_t)-1)
 
+typedef void (*sighandler_t)(int);
+
 extern char *progname;
+
+void genpwd_exit(int status);
+void signal_handler(int sig);
+void install_signals(void);
 
 extern const int genpwd_save_ids;
 extern const char genpwd_ids_fname[];

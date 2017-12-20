@@ -32,6 +32,25 @@ static size_t dsz = 0;
 const unsigned char *loaded_salt = salt;
 extern size_t salt_length;
 
+void genpwd_exit(int status)
+{
+	genpwd_exit_memory();
+	munmap(genpwd_memory_pool, genpwd_memory_pool_sz);
+	exit(status);
+}
+
+void signal_handler(int sig)
+{
+	fprintf(stderr, "%s: got signal %d.\n", progname, sig);
+	genpwd_exit(sig);
+}
+
+void install_signals(void)
+{
+	int x;
+	for (x = 1; x < NSIG; x++) signal(x, signal_handler);
+}
+
 static void *getrndbase(void)
 {
 	uintptr_t r;
@@ -204,7 +223,7 @@ void xerror(int noexit, int noerrno, const char *fmt, ...)
 		return;
 	}
 
-	exit(2);
+	genpwd_exit(2);
 }
 
 int iscomment(const char *s)
@@ -532,7 +551,7 @@ void listids(void)
 		if (*(ids+x)) printf("%s\n", *(ids+x));
 	}
 
-	exit(0);
+	genpwd_exit(0);
 }
 
 void saveids(void)
