@@ -27,6 +27,7 @@ static char *fkeyname;
 static int genkeyf;
 static char *data;
 static int i, c, kfd = 1;
+static size_t x;
 
 char *progname;
 
@@ -71,7 +72,7 @@ static void usage(void)
 static int getps_filter(struct getpasswd_state *getps, char chr, size_t pos)
 {
 	if (chr == '\x03') { /* ^C */
-		getps->retn = NOSIZE;
+		getps->retn = ((size_t)-2);
 		return 6;
 	}
 	return 1;
@@ -215,7 +216,9 @@ int main(int argc, char **argv)
 	getps.echo = "Enter master: ";
 	getps.charfilter = getps_filter;
 	getps.maskchar = 'x';
-	if (xgetpasswd(&getps) == NOSIZE) xerror(0, 0, "getting passwd");
+	x = xgetpasswd(&getps);
+	if (x == NOSIZE) xerror(0, 0, "getting passwd");
+	if (x == ((size_t)-2)) genpwd_exit(1);
 	memset(&getps, 0, sizeof(struct getpasswd_state));
 
 	pwdout = mkpwd_hint(loaded_salt, salt_length, master);
@@ -228,7 +231,8 @@ int main(int argc, char **argv)
 	getps.echo = "Enter name: ";
 	getps.charfilter = getps_plain_filter;
 	getps.maskchar = 0;
-	if (xgetpasswd(&getps) == NOSIZE) xerror(0, 0, "getting name");
+	if (x == NOSIZE) xerror(0, 0, "getting name");
+	if (x == ((size_t)-2)) genpwd_exit(1);
 	memset(&getps, 0, sizeof(struct getpasswd_state));
 
 	loadids(NULL);
