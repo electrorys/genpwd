@@ -351,6 +351,7 @@ static void safe_zero_object_label(FL_OBJECT *obj)
 static void clearentries(void)
 {
 	clearinput(master);
+	fl_set_input_maxchars(master, 64);
 	fl_activate_object(master);
 	clearinput(name);
 
@@ -575,7 +576,7 @@ int main(int argc, char **argv)
 	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(master, FL_RETURN_CHANGED);
 	fl_set_object_dblclick(master, 0);
-	fl_set_input_maxchars(master, 64); /* XXX */
+	fl_set_input_maxchars(master, 64);
 
 	mhashbox = fl_add_box(FL_FLAT_BOX, 215, 5, 30, 25, " -- ");
 
@@ -645,6 +646,7 @@ int main(int argc, char **argv)
 			clearentries();
 		else if (called == masbut) {
 			clearinput(master);
+			fl_set_input_maxchars(master, 64);
 			fl_activate_object(master);
 			fl_set_focus_object(form, master);
 			safe_zero_object_label(mhashbox);
