@@ -524,6 +524,7 @@ int main(int argc, char **argv)
 		getps.echo = "Enter name: ";
 		getps.charfilter = getps_plain_filter;
 		getps.maskchar = 0;
+		x = xgetpasswd(&getps);
 		if (x == NOSIZE) xerror(0, 0, "getting name");
 		if (x == ((size_t)-2)) genpwd_exit(1);
 		memset(&getps, 0, sizeof(struct getpasswd_state));
