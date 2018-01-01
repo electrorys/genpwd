@@ -41,7 +41,7 @@ void genpwd_exit(int status)
 
 void signal_handler(int sig)
 {
-	fprintf(stderr, "%s: got signal %d.\n", progname, sig);
+	genpwd_esay("%s: got signal %d.", progname, sig);
 	genpwd_exit(sig);
 }
 
@@ -206,17 +206,16 @@ void xerror(int noexit, int noerrno, const char *fmt, ...)
 	va_list ap;
 	char *s;
 
-	va_start(ap, fmt);
 
-	fprintf(stderr, "%s: ", progname);
-	vfprintf(stderr, fmt, ap);
+	genpwd_nesay("%s: ", progname);
+	va_start(ap, fmt);
+	genpwd_nvesay(fmt, ap);
+	va_end(ap);
 	if (errno && !noerrno) {
 		s = strerror(errno);
-		fprintf(stderr, ": %s\n", s);
+		genpwd_esay(": %s", s);
 	}
-	else fputc('\n', stderr);
-
-	va_end(ap);
+	else genpwd_esay("\n");
 
 	if (noexit) {
 		errno = 0;
@@ -545,10 +544,10 @@ void listids(void)
 	loadids(NULL);
 	will_saveids(SAVE_IDS_NEVER);
 
-	if (!ids || !nids) printf("No ids found.\n");
+	if (!ids || !nids) genpwd_say("No ids found.");
 
 	for (x = 0; x < nids; x++) {
-		if (*(ids+x)) printf("%s\n", *(ids+x));
+		if (*(ids+x)) genpwd_say("%s", *(ids+x));
 	}
 
 	genpwd_exit(0);

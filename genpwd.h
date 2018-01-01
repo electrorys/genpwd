@@ -1,8 +1,10 @@
 #ifndef _GENPWD_H
 #define _GENPWD_H
 
+#include <stdio.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include "mkpwd.h"
 #include "tf1024.h"
 
@@ -88,5 +90,12 @@ void loadids(ids_populate_fn idpfn);
 void listids(void);
 int will_saveids(int x);
 void saveids(void);
+
+void genpwd_vfsay(FILE *where, int addnl, const char *fmt, va_list ap);
+void genpwd_nvesay(const char *fmt, va_list ap);
+void genpwd_nesay(const char *fmt, ...);
+void genpwd_nsay(const char *fmt, ...);
+void genpwd_esay(const char *fmt, ...);
+void genpwd_say(const char *fmt, ...);
 
 #endif

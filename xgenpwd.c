@@ -60,34 +60,36 @@ size_t salt_length = sizeof(salt);
 static void usage(void)
 {
 	if (optopt == 'V') {
-		printf("genpwd passwords keeper.\n");
-		printf("Version %s, X11 XForms port.\n", _GENPWD_VERSION);
+		genpwd_say("genpwd passwords keeper.");
+		genpwd_say("Version %s, X11 XForms port.", _GENPWD_VERSION);
 		genpwd_exit(0);
 	}
 
-	printf("usage: %s [-xGODX8946mdUNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-		"[-s filename] [-I idsfile] [-w outkey]\n\n", progname);
-	printf("  -x: do not show password in output box. 'Copy' button will work.\n");
-	printf("  -G: disable exclusive keyboard grabbing\n");
-	printf("  -O: output only numeric octal password\n");
-	printf("  -D: output only numeric password (useful for pin numeric codes)\n");
-	printf("  -X: output hexadecimal password\n");
-	printf("  -8: output base85 password\n");
-	printf("  -9: output base95 password\n");
-	printf("  -4: output an ipv4 address\n");
-	printf("  -6: output an ipv6 address\n");
-	printf("  -m: output a mac address\n");
-	printf("  -d data: provide optional data for -46m options\n");
-	printf("  -U: output a UUID\n");
-	printf("  -k: request generation of binary keyfile\n");
-	printf("  -N: do not save ID data typed in Name field\n");
-	printf("  -i: list identifiers from .genpwd.ids\n");
-	printf("  -I file: use alternate ids file instead of .genpwd.ids\n");
-	printf("  -n PASSES: set number of PASSES of skein1024 function\n");
-	printf("  -o OFFSET: offset from beginning of 'big-passwd' string\n");
-	printf("  -l PASSLEN: sets the cut-out region of 'big-passwd' string\n");
-	printf("  -s filename: load alternative binary salt from filename\n");
-	printf("  -w outkey: write key or password to this file\n\n");
+	genpwd_say("usage: %s [-xGODX8946mdUNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+		"[-s filename] [-I idsfile] [-w outkey]", progname);
+	genpwd_say("\n");
+	genpwd_say("  -x: do not show password in output box. 'Copy' button will work.");
+	genpwd_say("  -G: disable exclusive keyboard grabbing");
+	genpwd_say("  -O: output only numeric octal password");
+	genpwd_say("  -D: output only numeric password (useful for pin numeric codes)");
+	genpwd_say("  -X: output hexadecimal password");
+	genpwd_say("  -8: output base85 password");
+	genpwd_say("  -9: output base95 password");
+	genpwd_say("  -4: output an ipv4 address");
+	genpwd_say("  -6: output an ipv6 address");
+	genpwd_say("  -m: output a mac address");
+	genpwd_say("  -d data: provide optional data for -46m options");
+	genpwd_say("  -U: output a UUID");
+	genpwd_say("  -k: request generation of binary keyfile");
+	genpwd_say("  -N: do not save ID data typed in Name field");
+	genpwd_say("  -i: list identifiers from .genpwd.ids");
+	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
+	genpwd_say("  -n PASSES: set number of PASSES of skein1024 function");
+	genpwd_say("  -o OFFSET: offset from beginning of 'big-passwd' string");
+	genpwd_say("  -l PASSLEN: sets the cut-out region of 'big-passwd' string");
+	genpwd_say("  -s filename: load alternative binary salt from filename");
+	genpwd_say("  -w outkey: write key or password to this file");
+	genpwd_say("\n");
 	genpwd_exit(1);
 }
 
@@ -515,7 +517,7 @@ int main(int argc, char **argv)
 		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		pwdout = mkpwd_hint(loaded_salt, salt_length, s_master);
-		fprintf(stderr, "Password hint: %s\n", pwdout);
+		genpwd_esay("Password hint: %s", pwdout);
 		memset(pwdout, 0, 4);
 
 		getps.fd = getps.efd = -1;

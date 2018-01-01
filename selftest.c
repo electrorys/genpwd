@@ -50,7 +50,7 @@ int selftest(void)
 
 		xpwd = mkpwd(ptst[i].salt, ptst[i].slen, d);
 		if (!xpwd[0] && xpwd[1]) {
-			fprintf(stderr, "%s", xpwd+1);
+			genpwd_esay("%s", xpwd+1);
 			ret = 0;
 			break;
 		}
