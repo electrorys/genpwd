@@ -5,7 +5,7 @@ UPX=upx
 ifneq (,$(DEBUG))
 override CFLAGS+=-O0 -g
 else
-override CFLAGS+=-O2 -D_SELFTEST_CURRENT
+override CFLAGS+=-O2
 endif
 
 XFORMS_CFLAGS:=-I/local/X11/include -I/local/include/freetype2

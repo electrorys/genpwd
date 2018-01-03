@@ -21,21 +21,18 @@
 #define TITLE_SHOW_CHARS 16
 
 /* embedded genpwd parts */
-static char s_master[256], s_name[256];
-static const char *d[] = {s_master, s_name, NULL, NULL};
-static char *data;
-static char *pwdout;
+static char *s_masterpw, *s_identifier;
 static int no_newline;
 static char *fkeyname;
 static int genkeyf;
 static int kfd = 1;
 
-static struct getpasswd_state getps;
+static size_t x;
 
 static FL_FORM *form;
 static Window win;
-static FL_OBJECT *master, *name, *mhashbox, *outbox, *idsbr, *pwlcnt;
-static FL_OBJECT *masbut, *nambut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
+static FL_OBJECT *masterpw, *identifier, *mhashbox, *outbox, *idsbr, *pwlcnt;
+static FL_OBJECT *maspwbut, *idbut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static FL_OBJECT *search, *srchup, *srchdown, *reloadids;
 static FL_OBJECT *called;
 
@@ -43,19 +40,21 @@ static FL_COLOR srchcol1, srchcol2;
 
 #include "icon.xpm"
 
-static int format_option;
+static short format_option = MKPWD_FMT_B64;
 static int do_not_show;
 static int do_not_grab;
-static char shadowed[MKPWD_OUTPUT_MAX];
+static char *shadowed;
 static int c;
 static size_t x;
 
 char *progname;
-static char newtitle[64];
 
 static char *stoi;
 
 size_t salt_length = sizeof(salt);
+
+static struct mkpwd_args *mkpwa;
+static struct getpasswd_state *getps;
 
 static void usage(void)
 {
@@ -65,7 +64,7 @@ static void usage(void)
 		genpwd_exit(0);
 	}
 
-	genpwd_say("usage: %s [-xGODX8946mdUNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	genpwd_say("usage: %s [-xGODX89Nik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 		"[-s filename] [-I idsfile] [-w outkey]", progname);
 	genpwd_say("\n");
 	genpwd_say("  -x: do not show password in output box. 'Copy' button will work.");
@@ -75,11 +74,6 @@ static void usage(void)
 	genpwd_say("  -X: output hexadecimal password");
 	genpwd_say("  -8: output base85 password");
 	genpwd_say("  -9: output base95 password");
-	genpwd_say("  -4: output an ipv4 address");
-	genpwd_say("  -6: output an ipv6 address");
-	genpwd_say("  -m: output a mac address");
-	genpwd_say("  -d data: provide optional data for -46m options");
-	genpwd_say("  -U: output a UUID");
 	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -N: do not save ID data typed in Name field");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
@@ -134,7 +128,7 @@ static void select_entry(FL_OBJECT *brobj, long arg FL_UNUSED_ARG)
 	const char *sel = fl_get_browser_line(brobj, fl_get_browser(brobj));
 	const char *srch = fl_get_input(search);
 
-	fl_set_input(name, sel);
+	fl_set_input(identifier, sel);
 	if (!arg) {
 		clearinput(search);
 		fl_set_object_color(search, srchcol1, srchcol2);
@@ -165,7 +159,7 @@ static void searchitem(void)
 	}
 
 out:	fl_deselect_browser(idsbr);
-	clearinput(name);
+	clearinput(identifier);
 	fl_set_object_color(search, srchcol1, (what && !*what) ? srchcol2 : FL_INDIANRED);
 }
 
@@ -256,69 +250,59 @@ static void set_output_label_size(int output_passwd_length)
 
 static void process_entries(void)
 {
-	char password[MKPWD_OUTPUT_MAX]; size_t pwl;
-	const char *d[4] = {NULL};
-	char *output, *fmt;
-	size_t n;
+	char *title, *fmt;
 
-	mkpwd_adjust();
+	mkpwa->format = format_option;
+	mkpwa->pwd = fl_get_input(masterpw);
+	mkpwa->id = fl_get_input(identifier);
+	if (!*mkpwa->id) return;
+	mkpwa->salt = loaded_salt;
+	mkpwa->szsalt = salt_length;
+	mkpwd_adjust(mkpwa);
 
-	mkpwd_output_format = format_option;
-	memset(password, 0, sizeof(password));
-	d[0] = fl_get_input(master);
-	pwl = strlen(d[0]);
-	memcpy(password, d[0], pwl);
-	d[0] = password; d[1] = fl_get_input(name); d[2] = NULL;
-	if (!d[1][0]) return;
-	if (format_option >= 0x1001 && format_option <= 0x1006) { d[2] = data; d[3] = NULL; }
-	output = mkpwd(loaded_salt, salt_length, d);
+	if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) goto _inval;
+	fl_set_object_label(mhashbox, mkpwa->result);
+	genpwd_free(mkpwa->result);
 
-	fmt = mkpwd_hint(loaded_salt, salt_length, password);
-	fl_set_object_label(mhashbox, fmt);
-	memset(fmt, 0, 4);
-
-	n = strlen(output); /* no utf8 there... */
-	if (n && n != default_password_length && format_option <= 5) {
-		memset(output, 0, MKPWD_OUTPUT_MAX);
-		strcpy(output+1, "(INVALID)");
-		n = sizeof("(INVALID)")-1;
+	if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error) goto _inval;
+	if (mkpwa->szresult != default_password_length) {
+_inval:		set_output_label_size(strlen(mkpwa->error));
+		fl_set_object_label(outbox, mkpwa->error);
+		return;
 	}
 
-	if (do_not_show && *output) {
-		memset(shadowed, 0, sizeof(shadowed));
-		set_output_label_size(sizeof("(HIDDEN)")-1);
+	if (do_not_show) {
+		genpwd_free(shadowed);
+		set_output_label_size(CSTR_SZ("(HIDDEN)"));
 		fl_set_object_label(outbox, "(HIDDEN)");
-		xstrlcpy(shadowed, output, sizeof(shadowed));
+		shadowed = genpwd_strdup(mkpwa->result);
 	}
 	else {
-		set_output_label_size(n);
-		fl_set_object_label(outbox, !*output ? output+1 : output);
+		set_output_label_size(mkpwa->szresult);
+		fl_set_object_label(outbox, mkpwa->result);
 	}
 
-	fl_deactivate_object(master);
+	fl_deactivate_object(masterpw);
+	genpwd_free(mkpwa->result);
 
-	memset(password, 0, sizeof(password));
-	if (*output) memset(output, 0, MKPWD_OUTPUT_MAX); output = NULL;
-
-	if (!is_dupid(d[1])) {
-		addid(d[1]);
+	if (!is_dupid(mkpwa->id)) {
+		addid(mkpwa->id);
 		will_saveids(SAVE_IDS_PLEASE);
-		fl_addto_browser(idsbr, d[1]);
+		fl_addto_browser(idsbr, mkpwa->id);
 	}
 
-	memset(newtitle, 0, sizeof(newtitle));
-	memcpy(newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)), d[1], TITLE_SHOW_CHARS);
-	if (strlen(d[1]) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
+	title = genpwd_malloc(TITLE_SHOW_CHARS*4);
+	memcpy(title+(TITLE_SHOW_CHARS*2), mkpwa->id, TITLE_SHOW_CHARS);
+	if (strlen(mkpwa->id) >= TITLE_SHOW_CHARS) fmt = "%s: %s...";
 	else fmt = "%s: %s";
-	snprintf(newtitle, sizeof(newtitle), fmt, progname,
-		newtitle+(sizeof(newtitle)-(sizeof(newtitle)/2)));
-	fl_wintitle(win, newtitle);
-	memset(newtitle, 0, sizeof(newtitle));
+	snprintf(title, TITLE_SHOW_CHARS*2, fmt, progname, title+(TITLE_SHOW_CHARS*2));
+	fl_wintitle(win, title);
+	genpwd_free(title);
 }
 
 static void copyclipboard(void)
 {
-	const char *data = shadowed[0] ? shadowed : fl_get_object_label(outbox);
+	const char *data = do_not_show ? shadowed : fl_get_object_label(outbox);
 	long len = (long)strlen(data);
 
 	fl_stuff_clipboard(outbox, 0, data, len, NULL);
@@ -352,10 +336,10 @@ static void safe_zero_object_label(FL_OBJECT *obj)
 
 static void clearentries(void)
 {
-	clearinput(master);
-	fl_set_input_maxchars(master, 64);
-	fl_activate_object(master);
-	clearinput(name);
+	clearinput(masterpw);
+	fl_set_input_maxchars(masterpw, 64);
+	fl_activate_object(masterpw);
+	clearinput(identifier);
 
 	safe_zero_object_label(outbox);
 	fl_set_object_label(outbox, " -- ");
@@ -366,7 +350,7 @@ static void clearentries(void)
 	fl_set_object_color(search, srchcol1, srchcol2);
 
 	fl_wintitle(win, progname);
-	fl_set_focus_object(form, master);
+	fl_set_focus_object(form, masterpw);
 	fl_deselect_browser(idsbr);
 }
 
@@ -383,57 +367,53 @@ static void removeitem(void)
 int main(int argc, char **argv)
 {
 	install_signals();
-	progname = basename(argv[0]);
+
+	progname = genpwd_strdup(basename(*argv));
+	mkpwa = genpwd_malloc(sizeof(struct mkpwd_args));
 
 	fl_malloc = genpwd_malloc;
 	fl_free = genpwd_free;
 	fl_realloc = genpwd_realloc;
 	fl_calloc = genpwd_calloc;
 
-	if (!selftest())
-		xerror(0, 1, "Self test failed. Program probably broken.");
-
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "xGn:o:l:ODX89iI:s:46md:UNkw:")) != -1) {
+	while ((c = getopt(argc, argv, "xGn:o:l:ODX89iI:s:Nkw:")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
-				if (*stoi || default_passes_number < 0 || default_passes_number > MKPWD_ROUNDS_MAX)
-					xerror(0, 1, "%s: rounds number must be between 0 and %u", optarg, MKPWD_ROUNDS_MAX);
+				if (*stoi || default_passes_number < 0)
+					xerror(0, 1, "%s: invalid passes number", optarg);
 				break;
 			case 'o':
 				default_string_offset = strtol(optarg, &stoi, 10);
-				if (*stoi || default_string_offset < 0 || default_string_offset > MKPWD_OUTPUT_MAX)
-					xerror(0, 1, "%s: offset must be between 0 and %u", optarg, MKPWD_OUTPUT_MAX);
+				if (*stoi || default_string_offset < 0)
+					xerror(0, 1, "%s: invalid offset number", optarg);
 				break;
 			case 'l':
 				default_password_length = strtol(optarg, &stoi, 10);
 				if (!fkeyname
-				&& (*stoi || !default_password_length || default_password_length < 0 || default_password_length > MKPWD_OUTPUT_MAX))
-					xerror(0, 1, "%s: password length must be between 1 and %u", optarg, MKPWD_OUTPUT_MAX);
+				&& (*stoi || default_password_length <= 0))
+					xerror(0, 1, "%s: invalid password length number", optarg);
 				break;
 			case 'O':
-				format_option = 3;
+				format_option = MKPWD_FMT_OCT;
 				break;
 			case 'D':
-				format_option = 1;
+				format_option = MKPWD_FMT_DEC;
 				break;
 			case 'X':
-				format_option = 2;
+				format_option = MKPWD_FMT_HEX;
 				break;
 			case '8':
-				format_option = 4;
+				format_option = MKPWD_FMT_A85;
 				break;
 			case '9':
-				format_option = 5;
+				format_option = MKPWD_FMT_A95;
 				break;
 			case 's':
-				loadsalt(optarg, &loaded_salt, &salt_length);
-				break;
-			case 'U':
-				format_option = 0xff;
+				loaded_salt = read_alloc_file(optarg, &salt_length);
 				break;
 			case 'N':
 				if (genpwd_save_ids == 0) {
@@ -450,7 +430,6 @@ int main(int argc, char **argv)
 				/* will be erased later */
 				if (genpwd_ids_filename) genpwd_free(genpwd_ids_filename);
 				genpwd_ids_filename = genpwd_strdup(optarg);
-				if (!genpwd_ids_filename) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'k':
 				if (!fkeyname) xerror(0, 1, "specify outkey with -w.");
@@ -459,30 +438,6 @@ int main(int argc, char **argv)
 			case 'w':
 				if (fkeyname) genpwd_free(fkeyname);
 				fkeyname = genpwd_strdup(optarg);
-				if (!fkeyname) xerror(0, 0, "strdup(%s)", optarg);
-				break;
-			case '4':
-				format_option = 0x1004;
-				if (data) genpwd_free(data);
-				data = genpwd_strdup("0.0.0.0/0");
-				if (!data) xerror(0, 0, "strdup");
-				break;
-			case '6':
-				format_option = 0x1006;
-				if (data) genpwd_free(data);
-				data = genpwd_strdup("::/0");
-				if (!data) xerror(0, 0, "strdup");
-				break;
-			case 'm':
-				format_option = 0x1001;
-				if (data) genpwd_free(data);
-				data = genpwd_strdup("0:0:0:0:0:0.0");
-				if (!data) xerror(0, 0, "strdup");
-				break;
-			case 'd':
-				if (data) genpwd_free(data);
-				data = genpwd_strdup(optarg);
-				if (!data) xerror(0, 0, "strdup(%s)", optarg);
 				break;
 			case 'x':
 				do_not_show = 1;
@@ -499,98 +454,97 @@ int main(int argc, char **argv)
 	fl_set_border_width(-1);
 	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
-	int i; for (i = 1; i < argc; i++) { memset(argv[i], 0, strlen(argv[i])); argv[i] = NULL; }
+	for (x = 1; x < argc; x++) {
+		memset(argv[x], 0, strlen(argv[x]));
+		argv[x] = NULL;
+	}
 	argc = 1;
 
 	/* embedded genpwd copy */
 	if (fkeyname) {
-		memset(&getps, 0, sizeof(struct getpasswd_state));
-		getps.fd = getps.efd = -1;
-		getps.passwd = s_master;
-		getps.pwlen = sizeof(s_master)-1;
-		getps.echo = "Enter master: ";
-		getps.charfilter = getps_filter;
-		getps.maskchar = 'x';
-		x = xgetpasswd(&getps);
+		getps = genpwd_malloc(sizeof(struct getpasswd_state));
+		s_masterpw = genpwd_malloc(GENPWD_MAXPWD);
+		s_identifier = genpwd_malloc(GENPWD_MAXPWD);
+
+		mkpwa->pwd = s_masterpw;
+		mkpwa->salt = loaded_salt;
+		mkpwa->szsalt = salt_length;
+
+		getps->fd = getps->efd = -1;
+		getps->passwd = s_masterpw;
+		getps->pwlen = genpwd_szalloc(s_masterpw)-1;
+		getps->echo = "Enter master: ";
+		getps->charfilter = getps_filter;
+		getps->maskchar = 'x';
+		x = xgetpasswd(getps);
 		if (x == NOSIZE) xerror(0, 0, "getting passwd");
 		if (x == ((size_t)-2)) genpwd_exit(1);
-		memset(&getps, 0, sizeof(struct getpasswd_state));
 
-		pwdout = mkpwd_hint(loaded_salt, salt_length, s_master);
-		genpwd_esay("Password hint: %s", pwdout);
-		memset(pwdout, 0, 4);
+		if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
+		genpwd_esay("Password hint: %s", mkpwa->result);
+		genpwd_free(mkpwa->result);
 
-		getps.fd = getps.efd = -1;
-		getps.passwd = s_name;
-		getps.pwlen = sizeof(s_name)-1;
-		getps.echo = "Enter name: ";
-		getps.charfilter = getps_plain_filter;
-		getps.maskchar = 0;
-		x = xgetpasswd(&getps);
+		mkpwa->id = s_identifier;
+
+		getps->fd = getps->efd = -1;
+		getps->passwd = s_identifier;
+		getps->pwlen = genpwd_szalloc(s_identifier)-1;
+		getps->echo = "Enter name: ";
+		getps->charfilter = getps_plain_filter;
+		getps->maskchar = 0;
+		x = xgetpasswd(getps);
 		if (x == NOSIZE) xerror(0, 0, "getting name");
 		if (x == ((size_t)-2)) genpwd_exit(1);
-		memset(&getps, 0, sizeof(struct getpasswd_state));
 
 		loadids(NULL);
-		if (!is_dupid(s_name)) {
-			addid(s_name);
+		if (!is_dupid(s_identifier)) {
+			addid(s_identifier);
 			will_saveids(SAVE_IDS_PLEASE);
 		}
 
-		mkpwd_adjust();
+		mkpwd_adjust(mkpwa);
 
 		if (!(!strcmp(fkeyname, "-")))
-			kfd = open(fkeyname, O_WRONLY | O_CREAT | O_LARGEFILE | O_TRUNC, 0666);
+			kfd = creat(fkeyname, S_IRUSR | S_IWUSR);
 		if (kfd == -1) xerror(0, 0, "%s", fkeyname);
-		if (kfd != 1) if (fchmod(kfd, S_IRUSR | S_IWUSR) != 0)
-			xerror(0, 0, "chmod of %s failed", fkeyname);
 		if (kfd != 1) no_newline = 1;
 
-		mkpwd_output_format = format_option;
+		mkpwa->format = format_option;
 		if (!genkeyf) {
-			if (format_option >= 0x1001 && format_option <= 0x1006) d[2] = data;
-			pwdout = mkpwd(loaded_salt, salt_length, d);
-			memset(s_master, 0, sizeof(s_master));
-			memset(s_name, 0, sizeof(s_name));
-			if (!pwdout[0] && pwdout[1]) xerror(0, 1, "%s", pwdout+1);
-			write(kfd, pwdout, strlen(pwdout));
+			if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
+				xerror(0, 1, "%s", mkpwa->error);
+			write(kfd, mkpwa->result, mkpwa->szresult);
 			if (!no_newline) write(kfd, "\n", 1);
-			memset(pwdout, 0, MKPWD_OUTPUT_MAX); pwdout = NULL;
 		}
 		else {
-			pwdout = mkpwbuf(loaded_salt, salt_length, d);
-			memset(s_master, 0, sizeof(s_master));
-			memset(s_name, 0, sizeof(s_name));
-			if (!pwdout[0] && pwdout[1]) xerror(0, 1, "%s", pwdout+1);
-			write(kfd, pwdout, default_password_length);
-			genpwd_free(pwdout); /* will erase automatically */
+			if (mkpwbuf(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
+			write(kfd, mkpwa->result, mkpwa->szresult);
 		}
 
 		if (kfd != 1) close(kfd);
-
 		saveids();
-
 		genpwd_exit(0);
+
 		return 0;
 	}
 
 	form = fl_bgn_form(FL_BORDER_BOX, 280, 410);
 
-	master = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
-	fl_set_object_return(master, FL_RETURN_CHANGED);
-	fl_set_object_dblclick(master, 0);
-	fl_set_input_maxchars(master, 64);
+	masterpw = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
+	fl_set_object_return(masterpw, FL_RETURN_CHANGED);
+	fl_set_object_dblclick(masterpw, 0);
+	fl_set_input_maxchars(masterpw, 64);
 
 	mhashbox = fl_add_box(FL_FLAT_BOX, 215, 5, 30, 25, " -- ");
 
-	masbut = fl_add_button(FL_NORMAL_BUTTON, 250, 5, 25, 25, "X");
-	fl_set_object_shortcut(masbut, "^T", 0);
+	maspwbut = fl_add_button(FL_NORMAL_BUTTON, 250, 5, 25, 25, "X");
+	fl_set_object_shortcut(maspwbut, "^T", 0);
 
-	name = fl_add_input(FL_NORMAL_INPUT, 5, 35, 240, 25, NULL);
-	fl_set_object_return(name, FL_RETURN_CHANGED);
+	identifier = fl_add_input(FL_NORMAL_INPUT, 5, 35, 240, 25, NULL);
+	fl_set_object_return(identifier, FL_RETURN_CHANGED);
 
-	nambut = fl_add_button(FL_NORMAL_BUTTON, 250, 35, 25, 25, "X");
-	fl_set_object_shortcut(nambut, "^U", 0);
+	idbut = fl_add_button(FL_NORMAL_BUTTON, 250, 35, 25, 25, "X");
+	fl_set_object_shortcut(idbut, "^U", 0);
 
 	idsbr = fl_add_browser(FL_HOLD_BROWSER, 5, 65, 270, 200, NULL);
 	fl_set_object_return(idsbr, FL_RETURN_SELECTION);
@@ -615,7 +569,7 @@ int main(int argc, char **argv)
 	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355, 270, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
 	fl_set_counter_value(pwlcnt, (double)default_password_length);
-	fl_set_counter_bounds(pwlcnt, (double)0, (double)MKPWD_OUTPUT_MAX);
+	fl_set_counter_bounds(pwlcnt, (double)0, (double)GENPWD_MAXPWD);
 	fl_set_counter_step(pwlcnt, (double)1, (double)0);
 	fl_set_counter_repeat(pwlcnt, 150);
 	fl_set_counter_min_repeat(pwlcnt, 25);
@@ -647,17 +601,17 @@ int main(int argc, char **argv)
 			copyclipboard();
 		else if (called == clearbutton)
 			clearentries();
-		else if (called == masbut) {
-			clearinput(master);
-			fl_set_input_maxchars(master, 64);
-			fl_activate_object(master);
-			fl_set_focus_object(form, master);
+		else if (called == maspwbut) {
+			clearinput(masterpw);
+			fl_set_input_maxchars(masterpw, 64);
+			fl_activate_object(masterpw);
+			fl_set_focus_object(form, masterpw);
 			safe_zero_object_label(mhashbox);
 			fl_set_object_label(mhashbox, " -- ");
 		}
-		else if (called == nambut) {
-			clearinput(name);
-			fl_set_focus_object(form, name);
+		else if (called == idbut) {
+			clearinput(identifier);
+			fl_set_focus_object(form, identifier);
 			removeitem();
 		}
 		else if (called == search)
@@ -672,13 +626,10 @@ int main(int argc, char **argv)
 	} while ((called = fl_do_forms()));
 
 	clearentries();
-	memset(shadowed, 0, sizeof(shadowed));
-
 	saveids();
-
 	if (!do_not_grab) grab_keyboard(0);
 	fl_finish();
-
 	genpwd_exit(0);
+
 	return 0;
 }

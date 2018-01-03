@@ -1,14 +1,37 @@
 #ifndef _GENPWD_H
 #define _GENPWD_H
 
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include <stdio.h>
-#include <signal.h>
-#include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <sys/mman.h>
 #include <stdarg.h>
+#include <signal.h>
+#include <errno.h>
+#include <termios.h>
+#include <libgen.h>
+
 #include "mkpwd.h"
+#include "smalloc.h"
+#include "getpasswd.h"
 #include "tf1024.h"
 
+#define GENPWD_MAXPWD MKPWD_MAXPWD
+
 #define NOSIZE ((size_t)-1)
+#define CSTR_SZ(x) (sizeof(x)-1)
 
 typedef void (*sighandler_t)(int);
 
@@ -23,27 +46,22 @@ extern const char genpwd_ids_fname[];
 #define genpwd_ids_magic "# _genpwd_ids file"
 
 extern const unsigned char salt[];
-extern int default_password_length;
-extern int default_string_offset;
-extern int default_passes_number;
-
-extern const char testmaster[];
-extern const char testname[];
-extern const char testxpwd[];
+extern size_t default_password_length;
+extern size_t default_string_offset;
+extern size_t default_passes_number;
 
 size_t xstrlcpy(char *dst, const char *src, size_t size);
 
-void mkpwd_adjust(void);
+void mkpwd_adjust(struct mkpwd_args *mkpwa);
 
-int selftest(void);
-
-void loadsalt(const char *fname, const unsigned char **P, size_t *B);
+off_t fdsize(int fd);
+void *read_alloc_fd(int fd, size_t blksz, size_t max, size_t *rsz);
+void *read_alloc_file(const char *file, size_t *rsz);
 
 /* new base64 */
 size_t base64_encode(char *output, const char *input, size_t inputl);
 /* old base64 */
 void b64_encode(char *dst, const unsigned char *src, size_t length);
-void stripchr(char *s, const char *rem);
 
 /* new base85 */
 void base85_encode(char *dst, const unsigned char *src, size_t count);
@@ -59,6 +77,7 @@ void *genpwd_malloc(size_t sz);
 void *genpwd_zalloc(size_t sz);
 void *genpwd_calloc(size_t nm, size_t sz);
 void *genpwd_realloc(void *p, size_t newsz);
+size_t genpwd_szalloc(const void *p);
 char *genpwd_strdup(const char *s);
 
 void genpwd_getrandom(void *buf, size_t size);
@@ -72,8 +91,7 @@ typedef void (*ids_populate_fn)(const char *str);
 extern const unsigned char *loaded_salt;
 extern size_t salt_length;
 
-void sk1024_loop(const unsigned char *src, size_t len, unsigned char *digest,
-			unsigned int bits, unsigned int passes);
+void sk1024iter(const unsigned char *src, size_t len, unsigned char *digest, unsigned int bits, unsigned int passes);
 
 #define SAVE_IDS_NEVER		-1 /* like -N */
 #define SAVE_IDS_QUERY		0 /* query status */
