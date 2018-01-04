@@ -5,10 +5,10 @@
 #include "mkpwd.h"
 #include "genpwd.h"
 
-static void remove_chars(char *s, size_t max, const char *rem)
+static void old_stripchr(char *s, const char *rem)
 {
 	const char *rst = rem;
-	char *d = s, *t = s;
+	char *d = s;
 	int add = 0;
 
 	while (*s) {
@@ -24,11 +24,30 @@ static void remove_chars(char *s, size_t max, const char *rem)
 		if (add) *d++ = *s;
 
 		s++;
-		if (s-t > max) break;
 		rem = rst;
 	}
 
 	memset(d, 0, s-d);
+}
+
+static size_t remove_chars(char *str, size_t max, const char *rm)
+{
+	const char *urm;
+	char *s;
+	size_t ntail;
+
+	urm = rm; ntail = 0;
+	while (*urm) {
+_findanother:	s = memchr(str, *urm, max);
+		if (s) {
+			memmove(s, s+1, max-(s-str)-1);
+			ntail++;
+			goto _findanother;
+		}
+		urm++;
+	}
+	memset(str+(max-ntail), 0, ntail);
+	return max-ntail;
 }
 
 #define reterror(p, s) do { 					\
@@ -71,31 +90,32 @@ int mkpwd(struct mkpwd_args *mkpwa)
 	}
 
 	if (mkpwa->format == MKPWD_FMT_B64) {
-		b64_encode(ret, bpw, TF_KEY_SIZE);
+		base64_encode(ret, bpw, TF_KEY_SIZE);
+		remove_chars(ret, MKPWD_MAXPWD, "./+=");
 		if (!getenv("_GENPWD_OLDB64")) {
 			void *tp = genpwd_malloc(MKPWD_MAXPWD);
-			base64_encode(tp, bpw, TF_KEY_SIZE);
+			b64_encode(tp, bpw, TF_KEY_SIZE);
+			old_stripchr(tp, "./+=");
 			if (strcmp(ret, tp) != 0)
 				reterror(tp, "New base64 failed");
 			genpwd_free(tp);
 		}
-		remove_chars(ret, MKPWD_MAXPWD, "./+=");
 	}
 	else if (mkpwa->format == MKPWD_FMT_A85) {
-		hash85(ret, bpw, TF_KEY_SIZE);
+		base85_encode(ret, bpw, TF_KEY_SIZE);
 		if (!getenv("_GENPWD_OLDB85")) {
 			void *tp = genpwd_malloc(MKPWD_MAXPWD);
-			base85_encode(tp, bpw, TF_KEY_SIZE);
+			hash85(tp, bpw, TF_KEY_SIZE);
 			if (strcmp(ret, tp) != 0)
 				reterror(tp, "New base85 failed");
 			genpwd_free(tp);
 		}
 	}
 	else if (mkpwa->format == MKPWD_FMT_A95) {
-		hash95(ret, bpw, TF_KEY_SIZE);
+		base95_encode(ret, bpw, TF_KEY_SIZE);
 		if (!getenv("_GENPWD_OLDB95")) {
 			void *tp = genpwd_malloc(MKPWD_MAXPWD);
-			base95_encode(tp, bpw, TF_KEY_SIZE);
+			hash95(tp, bpw, TF_KEY_SIZE);
 			if (strcmp(ret, tp) != 0)
 				reterror(tp, "New base95 failed");
 			genpwd_free(tp);
