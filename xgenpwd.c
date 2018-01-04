@@ -1,22 +1,8 @@
-#ifndef _BSD_SOURCE
-#define _BSD_SOURCE
-#endif
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <libgen.h>
+#include "genpwd.h"
+#include "genpwd_defs.h"
 #include <forms.h>
 
-#include "genpwd.h"
-#include "getpasswd.h"
-#include "genpwd_defs.h"
+#include "icon.xpm"
 
 #define TITLE_SHOW_CHARS 16
 
@@ -37,8 +23,6 @@ static FL_OBJECT *search, *srchup, *srchdown, *reloadids;
 static FL_OBJECT *called;
 
 static FL_COLOR srchcol1, srchcol2;
-
-#include "icon.xpm"
 
 static short format_option = MKPWD_FMT_B64;
 static int do_not_show;

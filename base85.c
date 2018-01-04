@@ -5,13 +5,8 @@
  * Modified and imported by Lynx for genpwd program.
  * -- 23Mar2017.
  */
-#include <stdlib.h>
-#include <limits.h>
-#include <stdint.h>
-#include <endian.h>
-#include "mkpwd.h"
 
-#define NR(x) (sizeof(x)/sizeof(*x))
+#include "genpwd.h"
 
 #define BASE85_DIGITS 5	 /* log85 (2^32) is 4.9926740807112 */
 #define BASE95_DIGITS 5	 /* log95 (2^32) is 4.8707310948237 */

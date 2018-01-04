@@ -16,8 +16,6 @@
  * - All functions calculate number of processed characters and return them to caller
  */
 
-#include <stdlib.h>
-#include <string.h>
 #include "genpwd.h"
 
 enum base64_encodestep {

@@ -1,5 +1,4 @@
-#include <string.h>
-#include <stdlib.h>
+#include "genpwd.h"
 
 static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

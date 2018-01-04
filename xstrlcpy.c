@@ -1,4 +1,4 @@
-#include <string.h>
+#include "genpwd.h"
 
 size_t xstrlcpy(char *dst, const char *src, size_t size)
 {

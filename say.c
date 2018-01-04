@@ -1,7 +1,4 @@
-#include <stddef.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include "genpwd.h"
 
 void genpwd_vfsay(FILE *where, int addnl, const char *fmt, va_list ap)
 {

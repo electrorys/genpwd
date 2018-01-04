@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <stdint.h>
 #include <errno.h>
 #include <termios.h>
 #include <libgen.h>

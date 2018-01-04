@@ -1,12 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <termios.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include "getpasswd.h"
+#include "genpwd.h"
 
 size_t xgetpasswd(struct getpasswd_state *getps)
 {

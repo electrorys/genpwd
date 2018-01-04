@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include "genpwd.h"
 
 #define POOL_MIN_SIZE 65536

@@ -5,9 +5,7 @@
  * but it is enough for generating a string from binary stream, even if it (maybe) lossy...
  */
 
-
-#include <stdint.h>
-#include <string.h>
+#include "genpwd.h"
 
 static uint8_t entab[95];
 
