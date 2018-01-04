@@ -13,13 +13,14 @@ XFORMS_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/local/X
 XFORMS_STATIC_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/local/X11/lib -lXft -lXpm -lX11 -lxcb -lfontconfig -lexpat -lXrender -lfreetype -lXau -lXdmcp -lbz2 -lz
 
 SRCS = $(wildcard *.c)
+HDRS = $(wildcard *.h)
 GENPWD_OBJS = $(filter-out xgenpwd.o, $(SRCS:.c=.o))
 XGENPWD_OBJS = $(filter-out genpwd.o, $(SRCS:.c=.o))
 
 default: genpwd
 all: genpwd xgenpwd
 
-%: %.c
+%.o: %.c VERSION $(HDRS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 xgenpwd.o: xgenpwd.c
