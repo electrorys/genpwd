@@ -111,10 +111,14 @@ void addid(const char *id)
 static void prepare_context(tf1024_ctx *tctx, const void *ctr)
 {
 	unsigned char key[TF_KEY_SIZE], tweak[sizeof(tctx->tfc.T)-TF_SIZE_UNIT];
+	size_t x;
 
 	sk1024(loaded_salt, salt_length, key, TF_MAX_BITS);
-	if (default_passes_number > 1)
-		sk1024iter(key, TF_KEY_SIZE, key, TF_MAX_BITS, default_passes_number);
+	if (default_passes_number) {
+		for (x = 0; x < default_passes_number; x++)
+			sk1024(key, TF_KEY_SIZE, key, TF_MAX_BITS);
+	}
+
 	tf1024_init(tctx);
 	tfc1024_set_key(&tctx->tfc, key, TF_KEY_SIZE);
 	sk1024(key, sizeof(key), tweak, TF_TO_BITS(sizeof(tweak)));

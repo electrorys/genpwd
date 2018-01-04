@@ -91,8 +91,6 @@ typedef void (*ids_populate_fn)(const char *str);
 extern const unsigned char *loaded_salt;
 extern size_t salt_length;
 
-void sk1024iter(const unsigned char *src, size_t len, unsigned char *digest, unsigned int bits, unsigned int passes);
-
 #define SAVE_IDS_NEVER		-1 /* like -N */
 #define SAVE_IDS_QUERY		0 /* query status */
 #define SAVE_IDS_PLEASE		1 /* yes please write out */

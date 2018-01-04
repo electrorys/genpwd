@@ -2,22 +2,6 @@
 
 const unsigned char *loaded_salt = salt;
 
-void sk1024iter(const unsigned char *src, size_t len, unsigned char *digest, unsigned int bits, unsigned int passes)
-{
-	unsigned char dgst[128] = {0};
-	int x;
-
-	if (passes == 0)
-		return;
-
-	sk1024(src, len, dgst, bits);
-	for (x = 0; x < passes-1; x++)
-		sk1024(dgst, bits/8, dgst, bits);
-
-	memmove(digest, dgst, bits/8);
-	memset(dgst, 0, sizeof(dgst));
-}
-
 void mkpwd_adjust(struct mkpwd_args *mkpwa)
 {
 	mkpwa->passes = default_passes_number;
