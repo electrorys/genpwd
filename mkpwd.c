@@ -166,7 +166,7 @@ int mkpwd(struct mkpwd_args *mkpwa)
 	return MKPWD_YES;
 }
 
-int mkpwbuf(struct mkpwd_args *mkpwa)
+int mkpwd_key(struct mkpwd_args *mkpwa)
 {
 	sk1024_ctx ctx;
 	size_t x;

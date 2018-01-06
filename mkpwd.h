@@ -30,7 +30,7 @@ struct mkpwd_args {
 };
 
 int mkpwd(struct mkpwd_args *mkpwa);
-int mkpwbuf(struct mkpwd_args *mkpwa);
+int mkpwd_key(struct mkpwd_args *mkpwa);
 int mkpwd_hint(struct mkpwd_args *mkpwa);
 
 #endif

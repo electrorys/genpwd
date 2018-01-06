@@ -218,7 +218,7 @@ int main(int argc, char **argv)
 		if (!no_newline) write(kfd, "\n", 1);
 	}
 	else {
-		if (mkpwbuf(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
+		if (mkpwd_key(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
 		write(kfd, mkpwa->result, mkpwa->szresult);
 	}
 
