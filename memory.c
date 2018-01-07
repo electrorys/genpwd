@@ -40,6 +40,9 @@ static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 
 static void genpwd_ub_handler(struct smalloc_pool *spool, const void *offender)
 {
+	memset(genpwd_memory_pool, 0, genpwd_memory_pool_sz);
+	munmap(genpwd_memory_pool, genpwd_memory_pool_sz);
+	genpwd_memory_pool = NULL;
 	xerror(0, 1, "UB: %p is not from our data storage!", offender);
 }
 
@@ -76,9 +79,10 @@ _again:		base = getrndbase();
 
 void genpwd_exit_memory(void)
 {
+	if (!genpwd_memory_pool) return;
+
 	/* will erase memory pool automatically */
 	sm_release_default_pool();
-	memset(genpwd_memory_pool, 0, genpwd_memory_pool_sz);
 	munmap(genpwd_memory_pool, genpwd_memory_pool_sz);
 	genpwd_memory_initialised = 0;
 }
