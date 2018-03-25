@@ -20,6 +20,7 @@ static Window win;
 static FL_OBJECT *masterpw, *identifier, *mhashbox, *outbox, *idsbr, *pwlcnt;
 static FL_OBJECT *maspwbut, *idbut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static FL_OBJECT *search, *srchup, *srchdown;
+static FL_OBJECT *hidepw;
 static FL_OBJECT *called;
 
 static FL_COLOR srchcol1, srchcol2;
@@ -222,6 +223,21 @@ static void set_output_label_size(int output_passwd_length)
 	else lsize = FL_TINY_SIZE;
 
 	fl_set_object_lsize(outbox, lsize);
+}
+
+static void hidepwd(void)
+{
+	do_not_show = fl_get_button(hidepw);
+	if (do_not_show) {
+		genpwd_free(shadowed);
+		shadowed = genpwd_strdup(fl_get_object_label(outbox));
+		set_output_label_size(CSTR_SZ("(HIDDEN)"));
+		fl_set_object_label(outbox, "(HIDDEN)");
+	}
+	else {
+		set_output_label_size(strlen(shadowed));
+		fl_set_object_label(outbox, shadowed);
+	}
 }
 
 static void process_entries(void)
@@ -540,6 +556,10 @@ int main(int argc, char **argv)
 	outbox = fl_add_box(FL_SHADOW_BOX, 5, 300, 270, 50, " -- ");
 	fl_set_object_lstyle(outbox, FL_FIXED_STYLE|FL_BOLD_STYLE);
 
+	hidepw = fl_add_button(FL_PUSH_BUTTON, 253, 301, 20, 20, "@9+");
+	fl_set_object_shortcut(hidepw, "^X", 0);
+	if (do_not_show) fl_set_button(hidepw, 1);
+
 	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355, 270, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
 	fl_set_counter_value(pwlcnt, (double)default_password_length);
@@ -594,6 +614,8 @@ int main(int argc, char **argv)
 			searchitemup();
 		else if (called == srchdown)
 			searchitemdown();
+		else if (called == hidepw)
+			hidepwd();
 		else if (called == quitbutton) break;
 	} while ((called = fl_do_forms()));
 
