@@ -3,6 +3,7 @@
 #include <string.h>
 #endif
 #include "genpwd.h"
+#include "tfcore.h"
 
 char **ids;
 int nids;
@@ -108,65 +109,63 @@ void addid(const char *id)
 	addid_init(id, NULL);
 }
 
-static void prepare_context(tf1024_ctx *tctx, const void *ctr)
+static void tf_key_tweak_compat(void *key)
 {
-	unsigned char key[TF_KEY_SIZE], tweak[sizeof(tctx->tfc.T)-TF_SIZE_UNIT];
+	TF_UNIT_TYPE *ukey = key, c = THREEFISH_CONST;
 	size_t x;
 
-	sk1024(loaded_salt, salt_length, key, TF_MAX_BITS);
-	if (default_passes_number) {
-		for (x = 0; x < default_passes_number; x++)
-			sk1024(key, TF_KEY_SIZE, key, TF_MAX_BITS);
-	}
-
-	tf1024_init(tctx);
-	tfc1024_set_key(&tctx->tfc, key, TF_KEY_SIZE);
-	sk1024(key, sizeof(key), tweak, TF_TO_BITS(sizeof(tweak)));
-	tfc1024_set_tweak(&tctx->tfc, tweak);
-	tf1024_start_counter(tctx, ctr);
-
-	memset(tweak, 0, sizeof(tweak));
-	memset(key, 0, TF_KEY_SIZE);
+	for (x = 0; x < TF_NR_BLOCK_UNITS; x++) c ^= ukey[x];
+	ukey[x] = c;
+	ukey[TF_TWEAK_WORD3] = ukey[TF_TWEAK_WORD1] ^ ukey[TF_TWEAK_WORD2];
 }
 
 static int decrypt_ids(int fd, char **data, size_t *dsz)
 {
-	tf1024_ctx tctx;
+	unsigned char key[TF_KEY_SIZE], tag[TF_BLOCK_SIZE];
 	char *ret = NULL;
 	void *ctr;
-	size_t sz;
+	size_t sz, x;
 
-	ctr = read_alloc_fd(fd, TF_KEY_SIZE, TF_KEY_SIZE, &sz);
+	ctr = read_alloc_fd(fd, TF_BLOCK_SIZE, TF_BLOCK_SIZE, &sz);
 	if (!ctr) goto _err;
-	prepare_context(&tctx, ctr);
+
+	skein(key, TF_MAX_BITS, loaded_salt, salt_length);
+	if (default_passes_number) {
+		for (x = 0; x < default_passes_number; x++)
+			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	}
+	skein(key+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	tf_key_tweak_compat(key);
 
 	ret = read_alloc_fd(fd, 256, 0, &sz);
 	if (!ret) goto _err;
 
 	/* check this before decrypt data + MAC checksum */
-	if (sz <= TF_KEY_SIZE) goto _err;
-	tf1024_crypt(&tctx, ret, sz-TF_KEY_SIZE, ret);
+	if (sz <= TF_BLOCK_SIZE) goto _err;
+	sz -= TF_BLOCK_SIZE;
+	tf_ctr_crypt(key, ctr, ret, ret, sz);
 
 	/* check MAC checksum at end of file (tfcrypt compatible) */
-	if (sz <= TF_KEY_SIZE) goto _err;
-	sz -= TF_KEY_SIZE;
-	tf1024_crypt(&tctx, ret+sz, TF_KEY_SIZE, ret+sz);
-	sk1024(ret, sz, ctr, TF_MAX_BITS);
-	if (memcmp(ret+sz, ctr, TF_KEY_SIZE) != 0) goto _err;
+	skein(tag, TF_MAX_BITS, ret, sz);
+	tf_ctr_crypt(key, ctr, ret+sz, ret+sz, TF_BLOCK_SIZE);
+	if (memcmp(ret+sz, tag, TF_BLOCK_SIZE) != 0) goto _err;
+
+	memset(key, 0, TF_BLOCK_SIZE);
+	memset(tag, 0, TF_BLOCK_SIZE);
 	genpwd_free(ctr);
-	memset(ret+sz, 0, TF_KEY_SIZE);
+	memset(ret+sz, 0, TF_BLOCK_SIZE);
 
 	if (strncmp(ret, genpwd_ids_magic, CSTR_SZ(genpwd_ids_magic)) != 0)
 		goto _err;
 
-	tf1024_done(&tctx);
-	*data = ret; *dsz = sz;
-
+	*data = ret;
+	*dsz = sz;
 	return 1;
 
 _err:
+	memset(key, 0, TF_BLOCK_SIZE);
+	memset(tag, 0, TF_BLOCK_SIZE);
 	genpwd_free(ctr);
-	tf1024_done(&tctx);
 	if (ret) genpwd_free(ret);
 	*data = NULL;
 	*dsz = 0;
@@ -175,26 +174,34 @@ _err:
 
 static void encrypt_ids(int fd, char *data, size_t dsz)
 {
-	tf1024_ctx tctx;
-	void *ctr;
+	unsigned char key[TF_KEY_SIZE], ctr[TF_BLOCK_SIZE], tag[TF_BLOCK_SIZE];
+	size_t x;
 
-	ctr = genpwd_malloc(TF_KEY_SIZE);
-	genpwd_getrandom(ctr, TF_KEY_SIZE);
-	write(fd, ctr, TF_KEY_SIZE);
-	prepare_context(&tctx, ctr);
+	genpwd_getrandom(ctr, TF_BLOCK_SIZE);
+	write(fd, ctr, TF_BLOCK_SIZE);
+
+	skein(key, TF_MAX_BITS, loaded_salt, salt_length);
+	if (default_passes_number) {
+		for (x = 0; x < default_passes_number; x++)
+			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	}
+	skein(key+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	tf_key_tweak_compat(key);
 
 	/* data maybe even shorter - see when ids file does not exist. */
-	sk1024(data, dsz, ctr, TF_MAX_BITS);
-	tf1024_crypt(&tctx, data, dsz, data);
-	tf1024_crypt(&tctx, ctr, TF_KEY_SIZE, ctr);
+	skein(tag, TF_MAX_BITS, data, dsz);
+	tf_ctr_crypt(key, ctr, data, data, dsz);
+	tf_ctr_crypt(key, ctr, tag, tag, TF_BLOCK_SIZE);
+
+	memset(key, 0, TF_KEY_SIZE);
 
 	/* write counter + data */
 	write(fd, data, dsz);
 	/* write MAC checksum */
-	write(fd, ctr, TF_KEY_SIZE);
+	write(fd, tag, TF_BLOCK_SIZE);
 
-	genpwd_free(ctr);
-	tf1024_done(&tctx);
+	memset(ctr, 0, TF_BLOCK_SIZE);
+	memset(tag, 0, TF_BLOCK_SIZE);
 }
 
 static void remove_deadids(char *data, size_t *n)

@@ -2,6 +2,7 @@
 
 void genpwd_exit(int status)
 {
+	genpwd_finirandom();
 	genpwd_exit_memory();
 	exit(status);
 }

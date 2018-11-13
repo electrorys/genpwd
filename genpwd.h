@@ -27,7 +27,10 @@
 #include "mkpwd.h"
 #include "smalloc.h"
 #include "getpasswd.h"
-#include "tf1024.h"
+#include "tfdef.h"
+#include "tfe.h"
+#include "tfprng.h"
+#include "skein.h"
 
 #define GENPWD_MAXPWD MKPWD_MAXPWD
 
@@ -61,15 +64,10 @@ void *read_alloc_file(const char *file, size_t *rsz);
 
 /* new base64 */
 size_t base64_encode(char *output, const char *input, size_t inputl);
-/* old base64 */
-void b64_encode(char *dst, const unsigned char *src, size_t length);
 
 /* new base85 */
 void base85_encode(char *dst, const unsigned char *src, size_t count);
 void base95_encode(char *dst, const unsigned char *src, size_t count);
-/* old base85 */
-void hash85(char *dst, const unsigned char *src, size_t len);
-void hash95(char *dst, const unsigned char *src, size_t len);
 
 void genpwd_init_memory(void);
 void genpwd_exit_memory(void);
@@ -81,7 +79,8 @@ void *genpwd_realloc(void *p, size_t newsz);
 size_t genpwd_szalloc(const void *p);
 char *genpwd_strdup(const char *s);
 
-void genpwd_getrandom(void *buf, size_t size);
+void genpwd_finirandom(void);
+void genpwd_getrandom(void *buf, size_t sz);
 
 void xerror(int noexit, int noerrno, const char *fmt, ...);
 

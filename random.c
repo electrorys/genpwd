@@ -1,6 +1,6 @@
 #include "genpwd.h"
 
-void genpwd_getrandom(void *buf, size_t size)
+static void get_urandom(void *buf, size_t size)
 {
 	char *ubuf = buf;
 	int fd = -1;
@@ -32,4 +32,31 @@ _again:	rd = read(fd, ubuf, size);
 	}
 
 	close(fd);
+}
+
+static int genpwd_random_initialised;
+
+static void genpwd_initrandom(void)
+{
+	unsigned char k[TF_KEY_SIZE];
+
+	if (genpwd_random_initialised == 1) return;
+
+	get_urandom(k, TF_KEY_SIZE);
+	tf_prng_seedkey(k);
+	memset(k, 0, TF_KEY_SIZE);
+
+	genpwd_random_initialised = 1;
+}
+
+void genpwd_finirandom(void)
+{
+	tf_prng_seedkey(NULL);
+	genpwd_random_initialised = 0;
+}
+
+void genpwd_getrandom(void *buf, size_t sz)
+{
+	if (genpwd_random_initialised == 0) genpwd_initrandom();
+	tf_prng_genrandom(buf, sz);
 }
