@@ -12,6 +12,8 @@
 #define MKPWD_FMT_B64	1
 #define MKPWD_FMT_A85	2
 #define MKPWD_FMT_A95	3
+#define MKPWD_FMT_UNIV	4
+#define MKPWD_FMT_CPWD	5
 
 struct mkpwd_args {
 	const char *pwd;
@@ -20,6 +22,9 @@ struct mkpwd_args {
 	size_t szsalt;
 
 	short format;
+	char *charset;
+	char charstart;
+	char charend;
 	size_t passes;
 	size_t offset;
 	size_t length;

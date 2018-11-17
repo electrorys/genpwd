@@ -4,6 +4,7 @@
 static char *masterpw;
 static char *identifier;
 static short format_option = MKPWD_FMT_B64;
+static char *charset;
 static int no_newline;
 static char *fkeyname;
 static int genkeyf;
@@ -26,7 +27,7 @@ static void usage(void)
 		genpwd_exit(0);
 	}
 
-	genpwd_say("usage: %s [-rODX89LNik] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	genpwd_say("usage: %s [-rODX89CLNik] [-U charset] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 		" [-s filename] [-I idsfile] [-w outkey]", progname);
 	genpwd_say("\n");
 	genpwd_say("  -O: output only numeric octal password");
@@ -34,6 +35,16 @@ static void usage(void)
 	genpwd_say("  -X: output hexadecimal password");
 	genpwd_say("  -8: output base85 password");
 	genpwd_say("  -9: output base95 password");
+	genpwd_say("  -C: like normal password, but with more digits");
+	genpwd_say("  -U charset: generate password characters from the given charset");
+	genpwd_say("  -U <alnum>: generate password characters from [a-zA-Z0-9] charset");
+	genpwd_say("  -U <alpha>: generate password characters from [a-zA-Z] charset");
+	genpwd_say("  -U <digit>: generate password characters from [0-9] charset");
+	genpwd_say("  -U <xdigit>: generate password characters from [0-9a-f] charset");
+	genpwd_say("  -U <uxdigit>: generate password characters from [0-9A-F] charset");
+	genpwd_say("  -U <lower>: generate password characters from [a-z] charset");
+	genpwd_say("  -U <upper>: generate password characters from [A-Z] charset");
+	genpwd_say("  -U <ascii>: generate password characters from all ASCII characters");
 	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -L: omit newline when printing password");
 	genpwd_say("  -N: do not save ID data typed in Name field");
@@ -90,7 +101,7 @@ int main(int argc, char **argv)
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "n:o:l:ODX89iI:s:LNkw:")) != -1) {
+	while ((c = getopt(argc, argv, "n:o:l:ODX89U:CiI:s:LNkw:")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -122,6 +133,29 @@ int main(int argc, char **argv)
 				break;
 			case '9':
 				format_option = MKPWD_FMT_A95;
+				break;
+			case 'C':
+				format_option = MKPWD_FMT_CPWD;
+				break;
+			case 'U':
+				format_option = MKPWD_FMT_UNIV;
+				if (!strcmp(optarg, "<alnum>"))
+					optarg = ALNUM_STRING;
+				else if (!strcmp(optarg, "<alpha>"))
+					optarg = ALPHA_STRING;
+				else if (!strcmp(optarg, "<digit>"))
+					optarg = DIGIT_STRING;
+				else if (!strcmp(optarg, "<xdigit>"))
+					optarg = XDIGIT_STRING;
+				else if (!strcmp(optarg, "<uxdigit>"))
+					optarg = UXDIGIT_STRING;
+				else if (!strcmp(optarg, "<ascii>"))
+					optarg = ASCII_STRING;
+				else if (!strcmp(optarg, "<lower>"))
+					optarg = LOWER_STRING;
+				else if (!strcmp(optarg, "<upper>"))
+					optarg = UPPER_STRING;
+				charset = genpwd_strdup(optarg);
 				break;
 			case 's':
 				loaded_salt = read_alloc_file(optarg, &salt_length);
@@ -211,6 +245,7 @@ int main(int argc, char **argv)
 	}
 
 	mkpwa->format = format_option;
+	if (charset) mkpwa->charset = charset;
 	if (!genkeyf) {
 		if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
 			xerror(0, 1, "%s", mkpwa->error);

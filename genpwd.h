@@ -37,6 +37,15 @@
 #define NOSIZE ((size_t)-1)
 #define CSTR_SZ(x) (sizeof(x)-1)
 
+#define ALNUM_STRING "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+#define ALPHA_STRING "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define LOWER_STRING "abcdefghijklmnopqrstuvwxyz"
+#define UPPER_STRING "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define DIGIT_STRING "0123456789"
+#define XDIGIT_STRING "0123456789abcdef"
+#define UXDIGIT_STRING "0123456789ABCDEF"
+#define ASCII_STRING " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+
 typedef void (*sighandler_t)(int);
 
 extern char *progname;

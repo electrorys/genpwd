@@ -47,7 +47,8 @@ int mkpwd(struct mkpwd_args *mkpwa)
 	|| (!mkpwa->salt || mkpwa->szsalt == 0)
 	|| !mkpwa->id
 	|| mkpwa->format == 0
-	|| mkpwa->length == 0) return MKPWD_NO;
+	|| mkpwa->length == 0
+	|| mkpwa->length >= MKPWD_MAXPWD) return MKPWD_NO;
 
 	bpw = genpwd_malloc(SKEIN_DIGEST_SIZE);
 	ret = genpwd_malloc(MKPWD_MAXPWD);
@@ -105,18 +106,92 @@ int mkpwd(struct mkpwd_args *mkpwa)
 
 		genpwd_free(tp);
 	}
+	else if (mkpwa->format == MKPWD_FMT_CPWD) {
+		void *rndata;
+		char c, *s, *d;
+		size_t x, i;
+
+		bpw = genpwd_realloc(bpw, mkpwa->length > TF_KEY_SIZE ? mkpwa->length : TF_KEY_SIZE);
+		rndata = genpwd_malloc(tf_prng_datasize());
+
+		tf_prng_seedkey_r(rndata, bpw);
+
+		s = bpw;
+		for (x = 0; x < mkpwa->length/2; x++) {
+_tryagainc1:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
+			if (strchr(ALPHA_STRING, c)) {
+				*s = c;
+				s++;
+			}
+			else goto _tryagainc1;
+		}
+		for (; x < mkpwa->length; x++) {
+_tryagainc2:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
+			if (strchr(DIGIT_STRING, c)) {
+				*s = c;
+				s++;
+			}
+			else goto _tryagainc2;
+		}
+
+		s = ret; d = bpw;
+		for (x = 0; x < mkpwa->length; x++) {
+_tryagainc3:		i = (size_t)tf_prng_range_r(rndata, 0, (TF_UNIT_TYPE)mkpwa->length-1);
+			if (d[i] == '\0') goto _tryagainc3;
+			*s = d[i];
+			s++;
+			d[i] = '\0';
+		}
+
+		tf_prng_seedkey_r(rndata, NULL);
+		genpwd_free(rndata);
+		goto _ret;
+	}
+	else if (mkpwa->format == MKPWD_FMT_UNIV) {
+		void *rndata;
+		char c, *s = ret;
+		size_t x;
+
+		if (mkpwa->charstart == '\0') mkpwa->charstart = 0x20;
+		if (mkpwa->charend == '\0') mkpwa->charend = 0x7f;
+
+		bpw = genpwd_realloc(bpw, TF_KEY_SIZE);
+		rndata = genpwd_malloc(tf_prng_datasize());
+
+		tf_prng_seedkey_r(rndata, bpw);
+
+		for (x = 0; x < mkpwa->length; x++) {
+_tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)mkpwa->charstart, (TF_UNIT_TYPE)mkpwa->charend);
+			if (mkpwa->charset) {
+				if (strchr(mkpwa->charset, c)) {
+					*s = c;
+					s++;
+				}
+				else goto _tryagainu;
+			}
+			else {
+				*s = c;
+				s++;
+			}
+		}
+
+		tf_prng_seedkey_r(rndata, NULL);
+		genpwd_free(rndata);
+		goto _ret;
+	}
 	else reterror(NULL, "Unsupported mkpwd format");
 
 	uret = ret;
 	memmove(ret, uret+mkpwa->offset, mkpwa->length);
 	memset(uret+mkpwa->length, 0, MKPWD_MAXPWD - mkpwa->length);
 
-	genpwd_free(bpw);
+_ret:	genpwd_free(bpw);
 	mkpwa->result = ret;
 	mkpwa->szresult = strnlen(ret, MKPWD_MAXPWD);
 	mkpwa->error = NULL;
 	return MKPWD_YES;
 }
+#undef reterror
 
 int mkpwd_key(struct mkpwd_args *mkpwa)
 {
