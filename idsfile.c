@@ -121,7 +121,8 @@ static void tf_key_tweak_compat(void *key)
 
 static int decrypt_ids(int fd, char **data, size_t *dsz)
 {
-	unsigned char key[TF_KEY_SIZE], tag[TF_BLOCK_SIZE];
+	TF_UNIT_TYPE key[TF_NR_KEY_UNITS], tag[TF_NR_BLOCK_UNITS];
+	TF_BYTE_TYPE *ukey = (TF_BYTE_TYPE *)key;
 	char *ret = NULL;
 	void *ctr;
 	size_t sz, x;
@@ -134,7 +135,7 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
-	skein(key+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	skein(ukey+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	tf_key_tweak_compat(key);
 
 	ret = read_alloc_fd(fd, 256, 0, &sz);
@@ -174,7 +175,8 @@ _err:
 
 static void encrypt_ids(int fd, char *data, size_t dsz)
 {
-	unsigned char key[TF_KEY_SIZE], ctr[TF_BLOCK_SIZE], tag[TF_BLOCK_SIZE];
+	TF_UNIT_TYPE key[TF_NR_KEY_UNITS], ctr[TF_NR_BLOCK_UNITS], tag[TF_NR_BLOCK_UNITS];
+	TF_BYTE_TYPE *ukey = (TF_BYTE_TYPE *)key;
 	size_t x;
 
 	genpwd_getrandom(ctr, TF_BLOCK_SIZE);
@@ -185,7 +187,7 @@ static void encrypt_ids(int fd, char *data, size_t dsz)
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
-	skein(key+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	skein(ukey+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	tf_key_tweak_compat(key);
 
 	/* data maybe even shorter - see when ids file does not exist. */
