@@ -5,7 +5,15 @@ UPX=upx
 ifneq (,$(DEBUG))
 override CFLAGS+=-O0 -g
 else
-override CFLAGS+=-O2
+override CFLAGS+=-O3
+endif
+
+ifneq (,$(STATIC))
+override LDFLAGS+=-static
+endif
+
+ifneq (,$(STRIP))
+override LDFLAGS+=-s
 endif
 
 XFORMS_CFLAGS:=-I/local/X11/include -I/local/include/freetype2
