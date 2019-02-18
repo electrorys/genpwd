@@ -52,7 +52,7 @@ void genpwd_init_memory(void)
 		int tries;
 
 		sc_page_size = sysconf(_SC_PAGE_SIZE);
-		if (sc_page_size == 0) sc_page_size = PAGE_SIZE;
+		if (sc_page_size == 0) sc_page_size = 4096;
 		sm_set_ub_handler(genpwd_ub_handler);
 		tries = 0;
 		genpwd_memory_pool_sz = (POOL_MIN_SIZE / sc_page_size) * sc_page_size;
