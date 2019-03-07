@@ -80,6 +80,8 @@ int mkpwd(struct mkpwd_args *mkpwa)
 		char *utp, *uret;
 		size_t d, y;
 
+		ret = genpwd_realloc(ret, genpwd_szalloc(ret)+(MKPWD_MAXPWD/4));
+
 		for (x = 0, d = 0, ubpw = bpw, uret = ret, utp = tp; x < TF_KEY_SIZE; x++) {
 			switch (mkpwa->format) {
 			case MKPWD_FMT_DEC:
@@ -186,8 +188,10 @@ _tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)mkpwa->charstart, (
 	memset(uret+mkpwa->length, 0, MKPWD_MAXPWD - mkpwa->length);
 
 _ret:	genpwd_free(bpw);
+	uret = ret;
+	mkpwa->szresult = strnlen(uret, MKPWD_MAXPWD);
+	ret = genpwd_realloc(ret, mkpwa->szresult+1);
 	mkpwa->result = ret;
-	mkpwa->szresult = strnlen(ret, MKPWD_MAXPWD);
 	mkpwa->error = NULL;
 	return MKPWD_YES;
 }
