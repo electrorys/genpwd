@@ -109,20 +109,10 @@ void addid(const char *id)
 	addid_init(id, NULL);
 }
 
-static void tf_key_tweak_compat(void *key)
-{
-	TF_UNIT_TYPE *ukey = key, c = THREEFISH_CONST;
-	size_t x;
-
-	for (x = 0; x < TF_NR_BLOCK_UNITS; x++) c ^= ukey[x];
-	ukey[x] = c;
-	ukey[TF_TWEAK_WORD3] = ukey[TF_TWEAK_WORD1] ^ ukey[TF_TWEAK_WORD2];
-}
-
 static int decrypt_ids(int fd, char **data, size_t *dsz)
 {
 	TF_UNIT_TYPE key[TF_NR_KEY_UNITS], tag[TF_NR_BLOCK_UNITS];
-	TF_BYTE_TYPE *ukey = (TF_BYTE_TYPE *)key;
+	TF_BYTE_TYPE tweak[TF_TWEAK_SIZE];
 	char *ret = NULL;
 	void *ctr;
 	size_t sz, x;
@@ -135,8 +125,9 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
-	skein(ukey+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
-	tf_key_tweak_compat(key);
+	skein(tweak, TF_NR_TWEAK_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	tf_tweak_set(key, tweak);
+	memset(tweak, 0, sizeof(tweak));
 
 	ret = read_alloc_fd(fd, 256, 0, &sz);
 	if (!ret) goto _err;
@@ -176,7 +167,7 @@ _err:
 static void encrypt_ids(int fd, char *data, size_t dsz)
 {
 	TF_UNIT_TYPE key[TF_NR_KEY_UNITS], ctr[TF_NR_BLOCK_UNITS], tag[TF_NR_BLOCK_UNITS];
-	TF_BYTE_TYPE *ukey = (TF_BYTE_TYPE *)key;
+	TF_BYTE_TYPE tweak[TF_TWEAK_SIZE];
 	size_t x;
 
 	genpwd_getrandom(ctr, TF_BLOCK_SIZE);
@@ -187,8 +178,9 @@ static void encrypt_ids(int fd, char *data, size_t dsz)
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
-	skein(ukey+TF_FROM_BITS(TF_MAX_BITS)+TF_SIZE_UNIT, 2*TF_UNIT_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
-	tf_key_tweak_compat(key);
+	skein(tweak, TF_NR_TWEAK_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
+	tf_tweak_set(key, tweak);
+	memset(tweak, 0, sizeof(tweak));
 
 	/* data maybe even shorter - see when ids file does not exist. */
 	skein(tag, TF_MAX_BITS, data, dsz);
@@ -239,7 +231,6 @@ void loadids(ids_populate_fn idpfn)
 {
 	int fd = -1;
 	char *path, *s, *d, *t;
-	int x;
 
 	if (!genpwd_ids_filename) {
 		path = genpwd_malloc(PATH_MAX);
@@ -268,7 +259,7 @@ void loadids(ids_populate_fn idpfn)
 		goto _err;
 	}
 
-	s = d = data; t = NULL; x = 0;
+	s = d = data; t = NULL;
 	while ((s = strtok_r(d, "\n", &t))) {
 		if (d) d = NULL;
 
