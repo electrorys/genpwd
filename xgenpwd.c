@@ -28,7 +28,6 @@ static FL_COLOR srchcol1, srchcol2;
 static short format_option = MKPWD_FMT_B64;
 static char *charset;
 static int do_not_show;
-static int do_not_grab;
 static char *shadowed;
 static int c;
 static size_t x;
@@ -50,11 +49,10 @@ static void usage(void)
 		genpwd_exit(0);
 	}
 
-	genpwd_say("usage: %s [-xGODX89CNik] [-U charset] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
+	genpwd_say("usage: %s [-xODX89CNik] [-U charset] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
 		"[-s filename] [-I idsfile] [-w outkey]", progname);
 	genpwd_say("\n");
 	genpwd_say("  -x: do not show password in output box. 'Copy' button will work.");
-	genpwd_say("  -G: disable exclusive keyboard grabbing");
 	genpwd_say("  -O: output only numeric octal password");
 	genpwd_say("  -D: output only numeric password (useful for pin numeric codes)");
 	genpwd_say("  -X: output hexadecimal password");
@@ -200,22 +198,6 @@ static void searchitemdown(void)
 			fl_set_object_color(search, srchcol1, FL_LIGHTGREEN);
 			return;
 		}
-	}
-}
-
-static void grab_keyboard(int do_grab)
-{
-	int status = 0;
-	char errstr[128];
-
-	if (do_grab) {
-		status = XGrabKeyboard(fl_display, win, False,
-			 GrabModeAsync, GrabModeAsync, CurrentTime);
-	}
-	else XUngrabKeyboard(fl_display, CurrentTime);
-	if (status > 0) {
-		XGetErrorText(fl_display, status, errstr, sizeof(errstr));
-		xerror(0, 1, "Keyboard grab failed: %s [%d]", errstr, status);
 	}
 }
 
@@ -383,7 +365,7 @@ int main(int argc, char **argv)
 	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "xGn:o:l:ODX89U:CiI:s:Nkw:")) != -1) {
+	while ((c = getopt(argc, argv, "xn:o:l:ODX89U:CiI:s:Nkw:")) != -1) {
 		switch (c) {
 			case 'n':
 				default_passes_number = strtol(optarg, &stoi, 10);
@@ -468,9 +450,6 @@ int main(int argc, char **argv)
 				break;
 			case 'x':
 				do_not_show = 1;
-				break;
-			case 'G':
-				do_not_grab = 1;
 				break;
 			default:
 				usage();
@@ -622,7 +601,6 @@ int main(int argc, char **argv)
 
 	fl_set_form_icon_data(form, icon);
 	fl_set_cursor(win, XC_left_ptr);
-	if (!do_not_grab) grab_keyboard(1);
 
 	do {
 		if (called == mkbutton)
@@ -657,7 +635,6 @@ int main(int argc, char **argv)
 
 	clearentries();
 	saveids();
-	if (!do_not_grab) grab_keyboard(0);
 	fl_finish();
 	genpwd_exit(0);
 
