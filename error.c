@@ -19,11 +19,10 @@ void install_signals(void)
 	for (x = 1; x < NSIG; x++) signal(x, signal_handler);
 }
 
-void xerror(int noexit, int noerrno, const char *fmt, ...)
+void xerror(gpwd_yesno noexit, gpwd_yesno noerrno, const char *fmt, ...)
 {
 	va_list ap;
 	char *s;
-
 
 	genpwd_nesay("%s: ", progname);
 	va_start(ap, fmt);

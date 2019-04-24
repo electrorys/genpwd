@@ -8,12 +8,10 @@
 
 /* embedded genpwd parts */
 static char *s_masterpw, *s_identifier;
-static int no_newline;
+static gpwd_yesno no_newline;
 static char *fkeyname;
-static int genkeyf;
+static gpwd_yesno genkeyf;
 static int kfd = 1;
-
-static size_t x;
 
 static FL_FORM *form;
 static Window win;
@@ -27,16 +25,12 @@ static FL_COLOR srchcol1, srchcol2;
 
 static short format_option = MKPWD_FMT_B64;
 static char *charset;
-static int do_not_show;
+static gpwd_yesno do_not_show;
 static char *shadowed;
-static int c;
-static size_t x;
 
 char *progname;
 
 static char *stoi;
-
-size_t salt_length = sizeof(salt);
 
 static struct mkpwd_args *mkpwa;
 static struct getpasswd_state *getps;
@@ -44,14 +38,16 @@ static struct getpasswd_state *getps;
 static void usage(void)
 {
 	if (optopt == 'V') {
-		genpwd_say("genpwd passwords keeper.");
+		genpwd_say("xgenpwd passwords keeper.");
 		genpwd_say("Version %s, X11 XForms port.", _GENPWD_VERSION);
 		genpwd_exit(0);
 	}
 
-	genpwd_say("usage: %s [-xODX89CNik] [-U charset] [-n PASSES] [-o OFFSET] [-l PASSLEN]"
-		"[-s filename] [-I idsfile] [-w outkey]", progname);
+	genpwd_say("usage: %s [opts] [--]", progname);
 	genpwd_say("\n");
+	genpwd_say("xgenpwd: generate passwords that could be recalled later.");
+	genpwd_say("\n");
+	genpwd_say("  -L <file>: load genpwd defaults from file.");
 	genpwd_say("  -x: do not show password in output box. 'Copy' button will work.");
 	genpwd_say("  -O: output only numeric octal password");
 	genpwd_say("  -D: output only numeric password (useful for pin numeric codes)");
@@ -69,13 +65,11 @@ static void usage(void)
 	genpwd_say("  -U <upper>: generate password characters from [A-Z] charset");
 	genpwd_say("  -U <ascii>: generate password characters from all ASCII characters");
 	genpwd_say("  -k: request generation of binary keyfile");
+	genpwd_say("  -j: omit newline when printing password");
 	genpwd_say("  -N: do not save ID data typed in Name field");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
-	genpwd_say("  -n PASSES: set number of PASSES of skein1024 function");
-	genpwd_say("  -o OFFSET: offset from beginning of 'big-passwd' string");
-	genpwd_say("  -l PASSLEN: sets the cut-out region of 'big-passwd' string");
-	genpwd_say("  -s filename: load alternative binary salt from filename");
+	genpwd_say("  -l pwlen: sets the cut-out region of 'big-passwd' string");
 	genpwd_say("  -w outkey: write key or password to this file");
 	genpwd_say("\n");
 	genpwd_exit(1);
@@ -138,7 +132,7 @@ static void searchitem(void)
 	const char *srch;
 	int x;
 
-	if (!what || !*what) goto out;
+	if (!what || str_empty(what)) goto out;
 
 	for (x = 1, srch = NULL; ; x++) {
 		srch = fl_get_browser_line(idsbr, x);
@@ -154,7 +148,7 @@ static void searchitem(void)
 
 out:	fl_deselect_browser(idsbr);
 	clearinput(identifier);
-	fl_set_object_color(search, srchcol1, (what && !*what) ? srchcol2 : FL_INDIANRED);
+	fl_set_object_color(search, srchcol1, (what && str_empty(what)) ? srchcol2 : FL_INDIANRED);
 }
 
 static void searchitemup(void)
@@ -164,7 +158,7 @@ static void searchitemup(void)
 	int idx = fl_get_browser(idsbr);
 	int x;
 
-	if (!what || !*what || !idx) return;
+	if (!what || str_empty(what) || !idx) return;
 
 	for (x = idx-1, srch = NULL; x >= 1; x--) {
 		srch = fl_get_browser_line(idsbr, x);
@@ -186,7 +180,7 @@ static void searchitemdown(void)
 	int idx = fl_get_browser(idsbr);
 	int x;
 
-	if (!what || !*what || !idx) return;
+	if (!what || str_empty(what) || !idx) return;
 
 	for (x = idx+1, srch = NULL; ; x++) {
 		srch = fl_get_browser_line(idsbr, x);
@@ -220,7 +214,7 @@ static void set_output_label_size(int output_passwd_length)
 
 static void hidepwd(void)
 {
-	do_not_show = fl_get_button(hidepw);
+	do_not_show = fl_get_button(hidepw) ? YES : NO;
 	if (do_not_show) {
 		genpwd_free(shadowed);
 		shadowed = genpwd_strdup(fl_get_object_label(outbox));
@@ -241,9 +235,9 @@ static void process_entries(void)
 	if (charset) mkpwa->charset = charset;
 	mkpwa->pwd = fl_get_input(masterpw);
 	mkpwa->id = fl_get_input(identifier);
-	if (!*mkpwa->id) return;
-	mkpwa->salt = loaded_salt;
-	mkpwa->szsalt = salt_length;
+	if (str_empty(mkpwa->id)) return;
+	mkpwa->salt = genpwd_salt;
+	mkpwa->szsalt = genpwd_szsalt;
 	mkpwd_adjust(mkpwa);
 
 	if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) goto _inval;
@@ -271,9 +265,9 @@ _inval:		set_output_label_size(strlen(mkpwa->error));
 	fl_deactivate_object(masterpw);
 	genpwd_free(mkpwa->result);
 
-	if (!is_dupid(mkpwa->id)) {
-		addid(mkpwa->id);
-		will_saveids(SAVE_IDS_PLEASE);
+	if (!genpwd_is_dupid(mkpwa->id)) {
+		genpwd_addid(mkpwa->id);
+		genpwd_will_saveids(SAVE_IDS_PLEASE);
 		fl_addto_browser(idsbr, mkpwa->id);
 	}
 
@@ -345,13 +339,17 @@ static void removeitem(void)
 	int x = fl_get_browser(idsbr);
 	const char *line = fl_get_browser_line(idsbr, x);
 
-	if (!delid(line)) return;
+	if (!genpwd_delid(line)) return;
 	fl_delete_browser_line(idsbr, x);
-	will_saveids(SAVE_IDS_PLEASE);
+	genpwd_will_saveids(SAVE_IDS_PLEASE);
 }
 
 int main(int argc, char **argv)
 {
+	int c;
+	char *s, *d;
+	size_t x;
+
 	install_signals();
 
 	progname = genpwd_strdup(basename(*argv));
@@ -362,26 +360,28 @@ int main(int argc, char **argv)
 	fl_realloc = genpwd_realloc;
 	fl_calloc = genpwd_calloc;
 
-	if (genpwd_save_ids == 0) will_saveids(SAVE_IDS_NEVER);
+	s = genpwd_malloc(PATH_MAX);
+	d = getenv("HOME");
+	if (!d) d = "";
+	if (xstrlcpy(s, d, PATH_MAX) >= PATH_MAX) goto _baddfname;
+	if (xstrlcat(s, "/.genpwd.defs", PATH_MAX) >= PATH_MAX) goto _baddfname;
+	genpwd_read_defaults(s, YES);
+_baddfname:
+	genpwd_free(s);
+
+	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "xn:o:l:ODX89U:CiI:s:Nkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:xl:ODX89U:CiI:jNkw:")) != -1) {
 		switch (c) {
-			case 'n':
-				default_passes_number = strtol(optarg, &stoi, 10);
-				if (*stoi || default_passes_number < 0)
-					xerror(0, 1, "%s: invalid passes number", optarg);
-				break;
-			case 'o':
-				default_string_offset = strtol(optarg, &stoi, 10);
-				if (*stoi || default_string_offset < 0)
-					xerror(0, 1, "%s: invalid offset number", optarg);
+			case 'L':
+				genpwd_read_defaults(optarg, NO);
 				break;
 			case 'l':
 				default_password_length = strtol(optarg, &stoi, 10);
 				if (!fkeyname
-				&& (*stoi || default_password_length <= 0))
-					xerror(0, 1, "%s: invalid password length number", optarg);
+				&& (!str_empty(stoi) || default_password_length <= 0))
+					xerror(NO, YES, "%s: invalid password length number", optarg);
 				break;
 			case 'O':
 				format_option = MKPWD_FMT_OCT;
@@ -421,19 +421,19 @@ int main(int argc, char **argv)
 					optarg = UPPER_STRING;
 				charset = genpwd_strdup(optarg);
 				break;
-			case 's':
-				loaded_salt = read_alloc_file(optarg, &salt_length);
+			case 'j':
+				no_newline = YES;
 				break;
 			case 'N':
-				if (genpwd_save_ids == 0) {
-					if (will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
-						will_saveids(SAVE_IDS_OVERRIDE);
-					else will_saveids(SAVE_IDS_NEVER);
+				if (genpwd_save_ids == NO) {
+					if (genpwd_will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
+						genpwd_will_saveids(SAVE_IDS_OVERRIDE);
+					else genpwd_will_saveids(SAVE_IDS_NEVER);
 				}
-				will_saveids(SAVE_IDS_NEVER);
+				genpwd_will_saveids(SAVE_IDS_NEVER);
 				break;
 			case 'i':
-				listids();
+				genpwd_listids();
 				break;
 			case 'I':
 				/* will be erased later */
@@ -441,15 +441,15 @@ int main(int argc, char **argv)
 				genpwd_ids_filename = genpwd_strdup(optarg);
 				break;
 			case 'k':
-				if (!fkeyname) xerror(0, 1, "specify outkey with -w.");
-				genkeyf = 1;
+				if (!fkeyname) xerror(NO, YES, "specify outkey with -w.");
+				genkeyf = YES;
 				break;
 			case 'w':
 				if (fkeyname) genpwd_free(fkeyname);
 				fkeyname = genpwd_strdup(optarg);
 				break;
 			case 'x':
-				do_not_show = 1;
+				do_not_show = YES;
 				break;
 			default:
 				usage();
@@ -473,8 +473,8 @@ int main(int argc, char **argv)
 		s_identifier = genpwd_malloc(GENPWD_MAXPWD);
 
 		mkpwa->pwd = s_masterpw;
-		mkpwa->salt = loaded_salt;
-		mkpwa->szsalt = salt_length;
+		mkpwa->salt = genpwd_salt;
+		mkpwa->szsalt = genpwd_szsalt;
 
 		getps->fd = getps->efd = -1;
 		getps->passwd = s_masterpw;
@@ -483,10 +483,10 @@ int main(int argc, char **argv)
 		getps->charfilter = getps_filter;
 		getps->maskchar = 'x';
 		x = xgetpasswd(getps);
-		if (x == NOSIZE) xerror(0, 0, "getting passwd");
+		if (x == NOSIZE) xerror(NO, NO, "getting passwd");
 		if (x == ((size_t)-2)) genpwd_exit(1);
 
-		if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
+		if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
 		genpwd_esay("Password hint: %s", mkpwa->result);
 		genpwd_free(mkpwa->result);
 
@@ -499,37 +499,37 @@ int main(int argc, char **argv)
 		getps->charfilter = getps_plain_filter;
 		getps->maskchar = 0;
 		x = xgetpasswd(getps);
-		if (x == NOSIZE) xerror(0, 0, "getting name");
+		if (x == NOSIZE) xerror(NO, NO, "getting name");
 		if (x == ((size_t)-2)) genpwd_exit(1);
 
-		loadids(NULL);
-		if (!is_dupid(s_identifier)) {
-			addid(s_identifier);
-			will_saveids(SAVE_IDS_PLEASE);
+		genpwd_loadids(NULL);
+		if (!genpwd_is_dupid(s_identifier)) {
+			genpwd_addid(s_identifier);
+			genpwd_will_saveids(SAVE_IDS_PLEASE);
 		}
 
 		mkpwd_adjust(mkpwa);
 
 		if (!(!strcmp(fkeyname, "-")))
 			kfd = creat(fkeyname, S_IRUSR | S_IWUSR);
-		if (kfd == -1) xerror(0, 0, "%s", fkeyname);
-		if (kfd != 1) no_newline = 1;
+		if (kfd == -1) xerror(NO, NO, "%s", fkeyname);
+		if (kfd != 1) no_newline = YES;
 
 		mkpwa->format = format_option;
 		if (charset) mkpwa->charset = charset;
 		if (!genkeyf) {
 			if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
-				xerror(0, 1, "%s", mkpwa->error);
+				xerror(NO, YES, "%s", mkpwa->error);
 			write(kfd, mkpwa->result, mkpwa->szresult);
 			if (!no_newline) write(kfd, "\n", 1);
 		}
 		else {
-			if (mkpwd_key(mkpwa) == MKPWD_NO && mkpwa->error) xerror(0, 1, "%s", mkpwa->error);
+			if (mkpwd_key(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
 			write(kfd, mkpwa->result, mkpwa->szresult);
 		}
 
 		if (kfd != 1) close(kfd);
-		saveids();
+		genpwd_saveids();
 		genpwd_exit(0);
 
 		return 0;
@@ -557,7 +557,7 @@ int main(int argc, char **argv)
 	fl_set_object_return(idsbr, FL_RETURN_SELECTION);
 	fl_set_object_callback(idsbr, select_entry, 0);
 	fl_set_object_dblbuffer(idsbr, 1);
-	loadids(fill_list);
+	genpwd_loadids(fill_list);
 	fl_set_browser_topline(idsbr, 1);
 
 	search = fl_add_input(FL_NORMAL_INPUT, 5, 270, 210, 25, NULL);
@@ -634,7 +634,7 @@ int main(int argc, char **argv)
 	} while ((called = fl_do_forms()));
 
 	clearentries();
-	saveids();
+	genpwd_saveids();
 	fl_finish();
 	genpwd_exit(0);
 

@@ -6,7 +6,7 @@
 #include "tfcore.h"
 
 char **ids;
-int nids;
+size_t nids;
 static int need_to_save_ids = -2; /* init to some nonsensical value */
 
 static char *data = NULL;
@@ -14,16 +14,7 @@ static size_t dsz = 0;
 
 char *genpwd_ids_filename;
 
-static int iscomment(const char *s)
-{
-	if (!*s
-	|| *s == '#'
-	|| *s == '\n'
-	|| (*s == '\r' && *(s+1) == '\n')) return 1;
-	return 0;
-}
-
-int will_saveids(int x)
+int genpwd_will_saveids(int x)
 {
 	if (x == SAVE_IDS_QUERY) return need_to_save_ids;
 	if (need_to_save_ids == SAVE_IDS_NEVER && x != SAVE_IDS_OVERRIDE) goto _ret;
@@ -31,7 +22,7 @@ int will_saveids(int x)
 _ret:	return need_to_save_ids;
 }
 
-int findid(const char *id)
+int genpwd_findid(const char *id)
 {
 	int x;
 
@@ -43,14 +34,14 @@ int findid(const char *id)
 	return -1;
 }
 
-int delid(const char *id)
+int genpwd_delid(const char *id)
 {
 	int idx;
 	size_t n;
 
 	if (!id) return 0;
 
-	idx = findid(id);
+	idx = genpwd_findid(id);
 	if (idx == -1) return 0;
 
 	if (*(ids+idx)) {
@@ -63,11 +54,11 @@ int delid(const char *id)
 	return 0;
 }
 
-int is_dupid(const char *id)
+int genpwd_is_dupid(const char *id)
 {
 
-	if (iscomment(id)) return 0;
-	if (findid(id) > -1) return 1;
+	if (is_comment(id)) return 0;
+	if (genpwd_findid(id) > -1) return 1;
 
 	return 0;
 }
@@ -78,16 +69,16 @@ static void addid_init(const char *id, char *initid)
 	char *old;
 	int x;
 
-	if ((id && iscomment(id)) || (initid && iscomment(initid))) return;
+	if ((id && is_comment(id)) || (initid && is_comment(initid))) return;
 
 	ids = genpwd_realloc(ids, sizeof(char *) * (nids + 1));
-	if (!ids) will_saveids(SAVE_IDS_NEVER);
+	if (!ids) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	if (!initid) {
 		n = strlen(id);
 		old = data;
 		data = genpwd_realloc(data, dsz+n+1);
-		if (!data) will_saveids(SAVE_IDS_NEVER);
+		if (!data) genpwd_will_saveids(SAVE_IDS_NEVER);
 		if (data != old) {
 			for (x = 0; x < nids; x++) {
 				if (*(ids+x))
@@ -104,7 +95,7 @@ static void addid_init(const char *id, char *initid)
 	nids++;
 }
 
-void addid(const char *id)
+void genpwd_addid(const char *id)
 {
 	addid_init(id, NULL);
 }
@@ -117,10 +108,10 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 	void *ctr;
 	size_t sz, x;
 
-	ctr = read_alloc_fd(fd, TF_BLOCK_SIZE, TF_BLOCK_SIZE, &sz);
+	ctr = genpwd_read_alloc_fd(fd, TF_BLOCK_SIZE, TF_BLOCK_SIZE, &sz);
 	if (!ctr) goto _err;
 
-	skein(key, TF_MAX_BITS, loaded_salt, salt_length);
+	skein(key, TF_MAX_BITS, genpwd_salt, genpwd_szsalt);
 	if (default_passes_number) {
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
@@ -129,7 +120,7 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 	tf_tweak_set(key, tweak);
 	memset(tweak, 0, sizeof(tweak));
 
-	ret = read_alloc_fd(fd, 256, 0, &sz);
+	ret = genpwd_read_alloc_fd(fd, GENPWD_MAXPWD, 0, &sz);
 	if (!ret) goto _err;
 
 	/* check this before decrypt data + MAC checksum */
@@ -173,7 +164,7 @@ static void encrypt_ids(int fd, char *data, size_t dsz)
 	genpwd_getrandom(ctr, TF_BLOCK_SIZE);
 	write(fd, ctr, TF_BLOCK_SIZE);
 
-	skein(key, TF_MAX_BITS, loaded_salt, salt_length);
+	skein(key, TF_MAX_BITS, genpwd_salt, genpwd_szsalt);
 	if (default_passes_number) {
 		for (x = 0; x < default_passes_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
@@ -227,7 +218,7 @@ static void alloc_fheader(void)
 	dsz = sizeof(genpwd_ids_magic);
 }
 
-void loadids(ids_populate_fn idpfn)
+void genpwd_loadids(ids_populate_fn idpfn)
 {
 	int fd = -1;
 	char *path, *s, *d, *t;
@@ -263,7 +254,7 @@ void loadids(ids_populate_fn idpfn)
 	while ((s = strtok_r(d, "\n", &t))) {
 		if (d) d = NULL;
 
-		if (iscomment(s)) continue;
+		if (is_comment(s)) continue;
 		addid_init(NULL, s);
 		if (idpfn) idpfn(s);
 	}
@@ -276,12 +267,12 @@ _err:	if (fd != -1) close(fd);
 	return;
 }
 
-void listids(void)
+void genpwd_listids(void)
 {
 	int x;
 
-	loadids(NULL);
-	will_saveids(SAVE_IDS_NEVER);
+	genpwd_loadids(NULL);
+	genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	if (!ids || !nids) genpwd_say("No ids found.");
 
@@ -292,7 +283,7 @@ void listids(void)
 	genpwd_exit(0);
 }
 
-void saveids(void)
+void genpwd_saveids(void)
 {
 	int fd = -1;
 	char *path, *s, *d, *t;
