@@ -34,29 +34,29 @@ _again:	rd = read(fd, ubuf, size);
 	close(fd);
 }
 
-static int genpwd_random_initialised;
+static gpwd_yesno genpwd_random_initialised;
 
 static void genpwd_initrandom(void)
 {
 	unsigned char k[TF_KEY_SIZE];
 
-	if (genpwd_random_initialised == 1) return;
+	if (genpwd_random_initialised == YES) return;
 
 	get_urandom(k, TF_KEY_SIZE);
 	tf_prng_seedkey(k);
 	memset(k, 0, TF_KEY_SIZE);
 
-	genpwd_random_initialised = 1;
+	genpwd_random_initialised = YES;
 }
 
 void genpwd_finirandom(void)
 {
 	tf_prng_seedkey(NULL);
-	genpwd_random_initialised = 0;
+	genpwd_random_initialised = NO;
 }
 
 void genpwd_getrandom(void *buf, size_t sz)
 {
-	if (genpwd_random_initialised == 0) genpwd_initrandom();
+	if (genpwd_random_initialised == NO) genpwd_initrandom();
 	tf_prng_genrandom(buf, sz);
 }
