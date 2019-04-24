@@ -63,3 +63,33 @@ _nspc:
 	memset(ln, 0, sizeof(ln));
 	fclose(f);
 }
+
+void genpwd_hash_defaults(char *uhash, size_t szuhash)
+{
+	struct skein sk;
+	gpwd_byte hash[TF_FROM_BITS(256)];
+	char shash[56];
+
+	skein_init(&sk, 256);
+
+	skein_update(&sk, genpwd_salt, genpwd_szsalt);
+
+	memset(shash, 0, sizeof(shash));
+	sprintf(shash, "%zu", default_passes_number);
+	skein_update(&sk, shash, strlen(shash));
+
+	memset(shash, 0, sizeof(shash));
+	sprintf(shash, "%zu", default_string_offset);
+	skein_update(&sk, shash, strlen(shash));
+
+	memset(shash, 0, sizeof(shash));
+	sprintf(shash, "%zu", default_password_length);
+	skein_update(&sk, shash, strlen(shash));
+
+	skein_final(hash, &sk);
+	memset(shash, 0, sizeof(shash));
+	base64_encode(shash, (const char *)hash, sizeof(hash));
+	memset(hash, 0, sizeof(hash));
+
+	xstrlcpy(uhash, shash, szuhash);
+}

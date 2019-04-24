@@ -80,6 +80,7 @@ size_t xstrlcat(char *dst, const char *src, size_t size);
 void mkpwd_adjust(struct mkpwd_args *mkpwa);
 
 void genpwd_read_defaults(const char *path, gpwd_yesno noerr);
+void genpwd_hash_defaults(char *uhash, size_t szuhash);
 
 gpwd_yesno is_comment(const char *str);
 gpwd_yesno str_empty(const char *str);

@@ -38,8 +38,13 @@ static struct getpasswd_state *getps;
 static void usage(void)
 {
 	if (optopt == 'V') {
+		char *shash = genpwd_malloc(64);
+
 		genpwd_say("xgenpwd passwords keeper.");
 		genpwd_say("Version %s, X11 XForms port.", _GENPWD_VERSION);
+		genpwd_hash_defaults(shash, 64);
+		genpwd_say("Defaults hash: %s", shash);
+		genpwd_free(shash);
 		genpwd_exit(0);
 	}
 
