@@ -36,8 +36,10 @@ static int genpwd_findid(const char *id)
 	int x;
 
 	for (x = 0; x < nids; x++) {
-		if (is_comment(ids[x])) continue;
-		if (ids[x] && !strcmp(ids[x], id)) return x;
+		if (ids[x]) {
+			if (is_comment(ids[x])) continue;
+			if (!strcmp(ids[x], id)) return x;
+		}
 	}
 
 	return -1;
