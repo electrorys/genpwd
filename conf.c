@@ -49,6 +49,33 @@ _nspc:
 			default_password_length = strtoul(d, &stoi, 10);
 			if (!str_empty(stoi) || default_password_length == 0) xerror(NO, YES, "[%s] %s: invalid password length number", path, d);
 		}
+		else if (!strcmp(s, "default_password_format")) {
+			if (!strcasecmp(d, CPPSTR(MKPWD_FMT_B64)) || !strcasecmp(d, "default")) default_password_format = MKPWD_FMT_B64;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_A85)) || !strcasecmp(d, "8")) default_password_format = MKPWD_FMT_A85;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_A95)) || !strcasecmp(d, "9")) default_password_format = MKPWD_FMT_A95;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_HEX)) || !strcasecmp(d, "X")) default_password_format = MKPWD_FMT_HEX;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_DEC)) || !strcasecmp(d, "D")) default_password_format = MKPWD_FMT_DEC;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_OCT)) || !strcasecmp(d, "O")) default_password_format = MKPWD_FMT_OCT;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_CPWD)) || !strcasecmp(d, "C")) default_password_format = MKPWD_FMT_CPWD;
+			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_UNIV)) || !strcasecmp(d, "U")) {
+				default_password_format = MKPWD_FMT_UNIV;
+				genpwd_free(default_password_charset);
+				default_password_charset = genpwd_strdup(GENPWD_ALNUM_STRING);
+			}
+		}
+		else if (!strcmp(s, "default_password_charset")) {
+			default_password_format = MKPWD_FMT_UNIV;
+			genpwd_free(default_password_charset);
+			if (!strcmp(d, GENPWD_ALNUM_STRING_NAME)) d = GENPWD_ALNUM_STRING;
+			else if (!strcmp(d, GENPWD_ALPHA_STRING_NAME)) d = GENPWD_ALPHA_STRING;
+			else if (!strcmp(d, GENPWD_LOWER_STRING_NAME)) d = GENPWD_LOWER_STRING;
+			else if (!strcmp(d, GENPWD_UPPER_STRING_NAME)) d = GENPWD_UPPER_STRING;
+			else if (!strcmp(d, GENPWD_DIGIT_STRING_NAME)) d = GENPWD_DIGIT_STRING;
+			else if (!strcmp(d, GENPWD_XDIGIT_STRING_NAME)) d = GENPWD_XDIGIT_STRING;
+			else if (!strcmp(d, GENPWD_UXDIGIT_STRING_NAME)) d = GENPWD_UXDIGIT_STRING;
+			else if (!strcmp(d, GENPWD_ASCII_STRING_NAME)) d = GENPWD_ASCII_STRING;
+			default_password_charset = genpwd_strdup(d);
+		}
 		else if (!strcmp(s, "genpwd_save_ids")) {
 			if (!strcasecmp(d, "yes") || !strcmp(d, "1")) genpwd_save_ids = YES;
 			else if (!strcasecmp(d, "no") || !strcmp(d, "0")) genpwd_save_ids = NO;
@@ -85,6 +112,12 @@ void genpwd_hash_defaults(char *uhash, size_t szuhash)
 	memset(shash, 0, sizeof(shash));
 	sprintf(shash, "%zu", default_password_length);
 	skein_update(&sk, shash, strlen(shash));
+
+	memset(shash, 0, sizeof(shash));
+	sprintf(shash, "%hd", default_password_format);
+	skein_update(&sk, shash, strlen(shash));
+
+	if (default_password_charset) skein_update(&sk, default_password_charset, strlen(default_password_charset));
 
 	skein_final(hash, &sk);
 	memset(shash, 0, sizeof(shash));

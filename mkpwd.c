@@ -121,7 +121,7 @@ int mkpwd(struct mkpwd_args *mkpwa)
 		s = bpw;
 		for (x = 0; x < mkpwa->length/2; x++) {
 _tryagainc1:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
-			if (strchr(ALPHA_STRING, c)) {
+			if (strchr(MKPWD_ALPHA_STRING, c)) {
 				*s = c;
 				s++;
 			}
@@ -129,7 +129,7 @@ _tryagainc1:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
 		}
 		for (; x < mkpwa->length; x++) {
 _tryagainc2:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
-			if (strchr(DIGIT_STRING, c)) {
+			if (strchr(MKPWD_DIGIT_STRING, c)) {
 				*s = c;
 				s++;
 			}

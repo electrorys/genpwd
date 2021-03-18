@@ -15,6 +15,9 @@
 #define MKPWD_FMT_UNIV	4
 #define MKPWD_FMT_CPWD	5
 
+#define MKPWD_ALPHA_STRING "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define MKPWD_DIGIT_STRING "0123456789"
+
 struct mkpwd_args {
 	const char *pwd;
 	const char *id;

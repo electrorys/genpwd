@@ -46,15 +46,24 @@ enum { NO, YES };
 
 #define NOSIZE ((size_t)-1)
 #define CSTR_SZ(x) (sizeof(x)-1)
+#define CPPSTR(x) #x
 
-#define ALNUM_STRING "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-#define ALPHA_STRING "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-#define LOWER_STRING "abcdefghijklmnopqrstuvwxyz"
-#define UPPER_STRING "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-#define DIGIT_STRING "0123456789"
-#define XDIGIT_STRING "0123456789abcdef"
-#define UXDIGIT_STRING "0123456789ABCDEF"
-#define ASCII_STRING " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+#define GENPWD_ALNUM_STRING_NAME "<alnum>"
+#define GENPWD_ALNUM_STRING MKPWD_ALPHA_STRING MKPWD_DIGIT_STRING
+#define GENPWD_ALPHA_STRING_NAME "<alpha>"
+#define GENPWD_ALPHA_STRING MKPWD_ALPHA_STRING
+#define GENPWD_LOWER_STRING_NAME "<lower>"
+#define GENPWD_LOWER_STRING "abcdefghijklmnopqrstuvwxyz"
+#define GENPWD_UPPER_STRING_NAME "<upper>"
+#define GENPWD_UPPER_STRING "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define GENPWD_DIGIT_STRING_NAME "<digit>"
+#define GENPWD_DIGIT_STRING MKPWD_DIGIT_STRING
+#define GENPWD_XDIGIT_STRING_NAME "<xdigit>"
+#define GENPWD_XDIGIT_STRING "0123456789abcdef"
+#define GENPWD_UXDIGIT_STRING_NAME "<uxdigit>"
+#define GENPWD_UXDIGIT_STRING "0123456789ABCDEF"
+#define GENPWD_ASCII_STRING_NAME "<ascii>"
+#define GENPWD_ASCII_STRING " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
 typedef void (*sighandler_t)(int);
 
@@ -73,6 +82,8 @@ extern size_t genpwd_szsalt;
 extern size_t default_password_length;
 extern size_t default_string_offset;
 extern size_t default_passes_number;
+extern short default_password_format;
+extern char *default_password_charset;
 
 size_t xstrlcpy(char *dst, const char *src, size_t size);
 size_t xstrlcat(char *dst, const char *src, size_t size);

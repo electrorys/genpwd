@@ -24,8 +24,6 @@ static FL_OBJECT *called;
 
 static FL_COLOR srchcol1, srchcol2;
 
-static short format_option = MKPWD_FMT_B64;
-static char *charset;
 static gpwd_yesno do_not_show;
 static char *shadowed;
 
@@ -62,14 +60,14 @@ static void usage(void)
 	genpwd_say("  -9: output base95 password");
 	genpwd_say("  -C: like normal password, but with more digits");
 	genpwd_say("  -U charset: generate password characters from the given charset");
-	genpwd_say("  -U <alnum>: generate password characters from [a-zA-Z0-9] charset");
-	genpwd_say("  -U <alpha>: generate password characters from [a-zA-Z] charset");
-	genpwd_say("  -U <digit>: generate password characters from [0-9] charset");
-	genpwd_say("  -U <xdigit>: generate password characters from [0-9a-f] charset");
-	genpwd_say("  -U <uxdigit>: generate password characters from [0-9A-F] charset");
-	genpwd_say("  -U <lower>: generate password characters from [a-z] charset");
-	genpwd_say("  -U <upper>: generate password characters from [A-Z] charset");
-	genpwd_say("  -U <ascii>: generate password characters from all ASCII characters");
+	genpwd_say("  -U " GENPWD_ALNUM_STRING_NAME ": generate password characters from [a-zA-Z0-9] charset");
+	genpwd_say("  -U " GENPWD_ALPHA_STRING_NAME ": generate password characters from [a-zA-Z] charset");
+	genpwd_say("  -U " GENPWD_DIGIT_STRING_NAME ": generate password characters from [0-9] charset");
+	genpwd_say("  -U " GENPWD_XDIGIT_STRING_NAME ": generate password characters from [0-9a-f] charset");
+	genpwd_say("  -U " GENPWD_UXDIGIT_STRING_NAME ": generate password characters from [0-9A-F] charset");
+	genpwd_say("  -U " GENPWD_LOWER_STRING_NAME ": generate password characters from [a-z] charset");
+	genpwd_say("  -U " GENPWD_UPPER_STRING_NAME ": generate password characters from [A-Z] charset");
+	genpwd_say("  -U " GENPWD_ASCII_STRING_NAME ": generate password characters from all ASCII characters");
 	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -j: omit newline when printing password");
 	genpwd_say("  -M <file>: load ids from file and merge them into current list.");
@@ -239,8 +237,8 @@ static void process_entries(void)
 {
 	char *title, *fmt;
 
-	mkpwa->format = format_option;
-	if (charset) mkpwa->charset = charset;
+	mkpwa->format = default_password_format;
+	if (default_password_charset) mkpwa->charset = default_password_charset;
 	mkpwa->pwd = fl_get_input(masterpw);
 	mkpwa->id = fl_get_input(identifier);
 	if (str_empty(mkpwa->id)) return;
@@ -390,42 +388,42 @@ _baddfname:
 					xerror(NO, YES, "%s: invalid password length number", optarg);
 				break;
 			case 'O':
-				format_option = MKPWD_FMT_OCT;
+				default_password_format = MKPWD_FMT_OCT;
 				break;
 			case 'D':
-				format_option = MKPWD_FMT_DEC;
+				default_password_format = MKPWD_FMT_DEC;
 				break;
 			case 'X':
-				format_option = MKPWD_FMT_HEX;
+				default_password_format = MKPWD_FMT_HEX;
 				break;
 			case '8':
-				format_option = MKPWD_FMT_A85;
+				default_password_format = MKPWD_FMT_A85;
 				break;
 			case '9':
-				format_option = MKPWD_FMT_A95;
+				default_password_format = MKPWD_FMT_A95;
 				break;
 			case 'C':
-				format_option = MKPWD_FMT_CPWD;
+				default_password_format = MKPWD_FMT_CPWD;
 				break;
 			case 'U':
-				format_option = MKPWD_FMT_UNIV;
-				if (!strcmp(optarg, "<alnum>"))
-					optarg = ALNUM_STRING;
-				else if (!strcmp(optarg, "<alpha>"))
-					optarg = ALPHA_STRING;
-				else if (!strcmp(optarg, "<digit>"))
-					optarg = DIGIT_STRING;
-				else if (!strcmp(optarg, "<xdigit>"))
-					optarg = XDIGIT_STRING;
-				else if (!strcmp(optarg, "<uxdigit>"))
-					optarg = UXDIGIT_STRING;
-				else if (!strcmp(optarg, "<ascii>"))
-					optarg = ASCII_STRING;
-				else if (!strcmp(optarg, "<lower>"))
-					optarg = LOWER_STRING;
-				else if (!strcmp(optarg, "<upper>"))
-					optarg = UPPER_STRING;
-				charset = genpwd_strdup(optarg);
+				default_password_format = MKPWD_FMT_UNIV;
+				if (!strcmp(optarg, GENPWD_ALNUM_STRING_NAME))
+					optarg = GENPWD_ALNUM_STRING;
+				else if (!strcmp(optarg, GENPWD_ALPHA_STRING_NAME))
+					optarg = GENPWD_ALPHA_STRING;
+				else if (!strcmp(optarg, GENPWD_DIGIT_STRING_NAME))
+					optarg = GENPWD_DIGIT_STRING;
+				else if (!strcmp(optarg, GENPWD_XDIGIT_STRING_NAME))
+					optarg = GENPWD_XDIGIT_STRING;
+				else if (!strcmp(optarg, GENPWD_UXDIGIT_STRING_NAME))
+					optarg = GENPWD_UXDIGIT_STRING;
+				else if (!strcmp(optarg, GENPWD_ASCII_STRING_NAME))
+					optarg = GENPWD_ASCII_STRING;
+				else if (!strcmp(optarg, GENPWD_LOWER_STRING_NAME))
+					optarg = GENPWD_LOWER_STRING;
+				else if (!strcmp(optarg, GENPWD_UPPER_STRING_NAME))
+					optarg = GENPWD_UPPER_STRING;
+				default_password_charset = genpwd_strdup(optarg);
 				break;
 			case 'j':
 				no_newline = YES;
@@ -524,8 +522,8 @@ _baddfname:
 		if (kfd == -1) xerror(NO, NO, "%s", fkeyname);
 		if (kfd != 1) no_newline = YES;
 
-		mkpwa->format = format_option;
-		if (charset) mkpwa->charset = charset;
+		mkpwa->format = default_password_format;
+		if (default_password_charset) mkpwa->charset = default_password_charset;
 		if (!genkeyf) {
 			if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
 				xerror(NO, YES, "%s", mkpwa->error);
