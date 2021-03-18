@@ -12,6 +12,7 @@ static gpwd_yesno no_newline;
 static char *fkeyname;
 static gpwd_yesno genkeyf;
 static int kfd = 1;
+static gpwd_yesno merged = NO;
 
 static FL_FORM *form;
 static Window win;
@@ -71,6 +72,8 @@ static void usage(void)
 	genpwd_say("  -U <ascii>: generate password characters from all ASCII characters");
 	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -j: omit newline when printing password");
+	genpwd_say("  -M <file>: load ids from file and merge them into current list.");
+	genpwd_say("    After merging, program will terminate. This option can be given multiple times.");
 	genpwd_say("  -N: do not save ID data typed in Name field");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
@@ -270,11 +273,9 @@ _inval:		set_output_label_size(strlen(mkpwa->error));
 	fl_deactivate_object(masterpw);
 	genpwd_free(mkpwa->result);
 
-	if (!genpwd_is_dupid(mkpwa->id)) {
-		genpwd_addid(mkpwa->id);
-		genpwd_will_saveids(SAVE_IDS_PLEASE);
-		fl_addto_browser(idsbr, mkpwa->id);
-	}
+	if (!genpwd_is_dupid(mkpwa->id)) fl_addto_browser(idsbr, mkpwa->id);
+	genpwd_addid(mkpwa->id);
+	genpwd_will_saveids(SAVE_IDS_PLEASE);
 
 	title = genpwd_malloc(TITLE_SHOW_CHARS*4);
 	memcpy(title+(TITLE_SHOW_CHARS*2), mkpwa->id, TITLE_SHOW_CHARS);
@@ -377,7 +378,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:xl:ODX89U:CiI:jNkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:xl:ODX89U:CiI:jM:Nkw:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -429,6 +430,12 @@ _baddfname:
 			case 'j':
 				no_newline = YES;
 				break;
+			case 'M':
+				c = genpwd_loadids_from_file(optarg, NULL);
+				if (c == -1) xerror(NO, NO, "%s", optarg);
+				else if (c == 0) xerror(NO, YES, "%s: cannot decipher", optarg);
+				merged = YES;
+				break;
 			case 'N':
 				if (genpwd_save_ids == NO) {
 					if (genpwd_will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
@@ -462,14 +469,13 @@ _baddfname:
 		}
 	}
 
-	fl_set_border_width(-1);
-	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
-
 	for (x = 1; x < argc; x++) {
 		memset(argv[x], 0, strlen(argv[x]));
 		argv[x] = NULL;
 	}
 	argc = 1;
+
+	if (merged == YES) goto _wriexit;
 
 	/* embedded genpwd copy */
 	if (fkeyname) {
@@ -508,10 +514,8 @@ _baddfname:
 		if (x == ((size_t)-2)) genpwd_exit(1);
 
 		genpwd_loadids(NULL);
-		if (!genpwd_is_dupid(s_identifier)) {
-			genpwd_addid(s_identifier);
-			genpwd_will_saveids(SAVE_IDS_PLEASE);
-		}
+		genpwd_addid(s_identifier);
+		genpwd_will_saveids(SAVE_IDS_PLEASE);
 
 		mkpwd_adjust(mkpwa);
 
@@ -539,6 +543,9 @@ _baddfname:
 
 		return 0;
 	}
+
+	fl_set_border_width(-1);
+	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
 	form = fl_bgn_form(FL_BORDER_BOX, 280, 410);
 
@@ -639,8 +646,9 @@ _baddfname:
 	} while ((called = fl_do_forms()));
 
 	clearentries();
-	genpwd_saveids();
 	fl_finish();
+_wriexit:
+	genpwd_saveids();
 	genpwd_exit(0);
 
 	return 0;

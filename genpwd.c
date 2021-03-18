@@ -9,6 +9,7 @@ static gpwd_yesno no_newline;
 static char *fkeyname;
 static gpwd_yesno genkeyf;
 static int kfd = 1;
+static gpwd_yesno merged = NO;
 
 char *progname;
 
@@ -50,6 +51,8 @@ static void usage(void)
 	genpwd_say("  -U <ascii>: generate password characters from all ASCII characters");
 	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -j: omit newline when printing password");
+	genpwd_say("  -M <file>: load ids from file and merge them into current list.");
+	genpwd_say("    After merging, program will terminate. This option can be given multiple times.");
 	genpwd_say("  -N: do not save ID data typed in Name field");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
@@ -114,7 +117,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:l:ODX89U:CiI:jNkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:l:ODX89U:CiI:jM:Nkw:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -166,13 +169,19 @@ _baddfname:
 			case 'j':
 				no_newline = YES;
 				break;
+			case 'M':
+				c = genpwd_loadids_from_file(optarg, NULL);
+				if (c == -1) xerror(NO, NO, "%s", optarg);
+				else if (c == 0) xerror(NO, YES, "%s: cannot decipher", optarg);
+				merged = YES;
+				break;
 			case 'N':
 				if (genpwd_save_ids == NO) {
 					if (genpwd_will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
 						genpwd_will_saveids(SAVE_IDS_OVERRIDE);
 					else genpwd_will_saveids(SAVE_IDS_NEVER);
 				}
-				genpwd_will_saveids(SAVE_IDS_NEVER);
+				else genpwd_will_saveids(SAVE_IDS_NEVER);
 				break;
 			case 'i':
 				genpwd_listids();
@@ -201,6 +210,8 @@ _baddfname:
 		argv[x] = NULL;
 	}
 	argc = 1;
+
+	if (merged == YES) goto _wriexit;
 
 	mkpwa->pwd = masterpw;
 	mkpwa->salt = genpwd_salt;
@@ -233,10 +244,8 @@ _baddfname:
 	if (x == ((size_t)-2)) genpwd_exit(1);
 
 	genpwd_loadids(NULL);
-	if (!genpwd_is_dupid(identifier)) {
-		genpwd_addid(identifier);
-		genpwd_will_saveids(SAVE_IDS_PLEASE);
-	}
+	genpwd_addid(identifier);
+	genpwd_will_saveids(SAVE_IDS_PLEASE);
 
 	mkpwd_adjust(mkpwa);
 
@@ -261,6 +270,7 @@ _baddfname:
 	}
 
 	if (kfd != 1) close(kfd);
+_wriexit:
 	genpwd_saveids();
 	genpwd_exit(0);
 

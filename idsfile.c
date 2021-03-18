@@ -7,12 +7,21 @@
 
 char **ids;
 size_t nids;
-static int need_to_save_ids = -2; /* init to some nonsensical value */
+static int need_to_save_ids = SAVE_IDS_PLEASE;
 
 static char *data = NULL;
 static size_t dsz = 0;
 
 char *genpwd_ids_filename;
+
+static void alloc_fheader(void)
+{
+	if (data && dsz) return;
+
+	data = genpwd_malloc(sizeof(genpwd_ids_magic));
+	memcpy(data, genpwd_ids_magic, sizeof(genpwd_ids_magic));
+	dsz = sizeof(genpwd_ids_magic);
+}
 
 int genpwd_will_saveids(int x)
 {
@@ -22,13 +31,13 @@ int genpwd_will_saveids(int x)
 _ret:	return need_to_save_ids;
 }
 
-int genpwd_findid(const char *id)
+static int genpwd_findid(const char *id)
 {
 	int x;
 
 	for (x = 0; x < nids; x++) {
-		if (*(ids+x)
-		&& !strcmp(*(ids+x), id)) return x;
+		if (is_comment(ids[x])) continue;
+		if (ids[x] && !strcmp(ids[x], id)) return x;
 	}
 
 	return -1;
@@ -44,10 +53,10 @@ int genpwd_delid(const char *id)
 	idx = genpwd_findid(id);
 	if (idx == -1) return 0;
 
-	if (*(ids+idx)) {
-		n = strlen(*(ids+idx));
-		memset(*(ids+idx), 0, n);
-		*(ids+idx) = NULL;
+	if (ids[idx]) {
+		n = strlen(ids[idx]);
+		memset(ids[idx], 0, n);
+		ids[idx] = NULL;
 		return 1;
 	}
 
@@ -63,41 +72,40 @@ int genpwd_is_dupid(const char *id)
 	return 0;
 }
 
-static void addid_init(const char *id, char *initid)
+void genpwd_addid(const char *id)
 {
 	size_t n;
 	char *old;
 	int x;
 
-	if ((id && is_comment(id)) || (initid && is_comment(initid))) return;
+	if (genpwd_is_dupid(id)) return;
+
+	alloc_fheader();
 
 	ids = genpwd_realloc(ids, sizeof(char *) * (nids + 1));
-	if (!ids) genpwd_will_saveids(SAVE_IDS_NEVER);
-
-	if (!initid) {
-		n = strlen(id);
-		old = data;
-		data = genpwd_realloc(data, dsz+n+1);
-		if (!data) genpwd_will_saveids(SAVE_IDS_NEVER);
-		if (data != old) {
-			for (x = 0; x < nids; x++) {
-				if (*(ids+x))
-					*(ids+x) -= (old-data);
-			}
-		}
-		memset(data+dsz, 0, n+1);
-		xstrlcpy(data+dsz, id, n+1);
-		*(ids+nids) = data+dsz;
-		dsz += n+1;
+	if (!ids) {
+		genpwd_will_saveids(SAVE_IDS_NEVER);
+		return;
 	}
-	else *(ids+nids) = initid;
+
+	n = strlen(id);
+	old = data;
+	data = genpwd_realloc(data, dsz+n+1);
+	if (!data) {
+		genpwd_will_saveids(SAVE_IDS_NEVER);
+		return;
+	}
+	if (data != old) {
+		for (x = 0; x < nids; x++) {
+			if (ids[x]) ids[x] -= (old-data);
+		}
+	}
+	memset(data+dsz, 0, n+1);
+	xstrlcpy(data+dsz, id, n+1);
+	ids[nids] = data+dsz;
+	dsz += n+1;
 
 	nids++;
-}
-
-void genpwd_addid(const char *id)
-{
-	addid_init(id, NULL);
 }
 
 static int decrypt_ids(int fd, char **data, size_t *dsz)
@@ -209,19 +217,42 @@ static void remove_deadids(char *data, size_t *n)
 	}
 }
 
-static void alloc_fheader(void)
+int genpwd_loadids_from_file(const char *path, ids_populate_fn idpfn)
 {
-	if (data && dsz) return;
+	int fd = -1;
+	char *vd = NULL;
+	size_t vdsz = 0;
+	char *s, *d, *t;
 
-	data = genpwd_malloc(sizeof(genpwd_ids_magic));
-	memcpy(data, genpwd_ids_magic, sizeof(genpwd_ids_magic));
-	dsz = sizeof(genpwd_ids_magic);
+	if (!ids) ids = genpwd_malloc(sizeof(char *));
+	if (!ids) return -1;
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) return -1;
+
+	if (!decrypt_ids(fd, &vd, &vdsz)) {
+		close(fd);
+		return 0;
+	}
+	close(fd);
+
+	s = d = vd; t = NULL;
+	while ((s = strtok_r(d, "\n", &t))) {
+		if (d) d = NULL;
+
+		if (is_comment(s)) continue;
+		genpwd_addid(s);
+		if (idpfn) idpfn(s);
+	}
+
+	genpwd_free(vd);
+
+	return 1;
 }
 
 void genpwd_loadids(ids_populate_fn idpfn)
 {
-	int fd = -1;
-	char *path, *s, *d, *t;
+	char *path, *s, *t;
 
 	if (!genpwd_ids_filename) {
 		path = genpwd_malloc(PATH_MAX);
@@ -235,36 +266,10 @@ void genpwd_loadids(ids_populate_fn idpfn)
 		t = genpwd_ids_filename;
 	}
 
-	ids = genpwd_malloc(sizeof(char *));
-	if (!ids) goto _done;
-
-	fd = open(t, O_RDONLY);
-	if (fd == -1) {
-		alloc_fheader();
-		goto _done;
-	}
-
-	decrypt_ids(fd, &data, &dsz);
-	if (!data || !dsz) {
-		alloc_fheader();
-		goto _err;
-	}
-
-	s = d = data; t = NULL;
-	while ((s = strtok_r(d, "\n", &t))) {
-		if (d) d = NULL;
-
-		if (is_comment(s)) continue;
-		addid_init(NULL, s);
-		if (idpfn) idpfn(s);
-	}
+	/* prevent overwriting of existing ids list if there is no valid key for it */
+	if (genpwd_loadids_from_file(t, idpfn) == 0) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 _done:	genpwd_free(path);
-	return;
-
-_err:	if (fd != -1) close(fd);
-	genpwd_free(path);
-	return;
 }
 
 void genpwd_listids(void)
@@ -277,7 +282,7 @@ void genpwd_listids(void)
 	if (!ids || !nids) genpwd_say("No ids found.");
 
 	for (x = 0; x < nids; x++) {
-		if (*(ids+x)) genpwd_say("%s", *(ids+x));
+		if (ids[x]) genpwd_say("%s", ids[x]);
 	}
 
 	genpwd_exit(0);

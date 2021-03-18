@@ -118,11 +118,11 @@ typedef void (*ids_populate_fn)(const char *str);
 
 extern char *genpwd_ids_filename; /* if set - open this file instead of default genpwd_ids_fname. */
 
-int genpwd_findid(const char *id);
-int genpwd_delid(const char *id);
 int genpwd_is_dupid(const char *id);
+int genpwd_delid(const char *id);
 void genpwd_addid(const char *id);
 void genpwd_loadids(ids_populate_fn idpfn);
+int genpwd_loadids_from_file(const char *path, ids_populate_fn idpfn);
 void genpwd_listids(void);
 int genpwd_will_saveids(int x);
 void genpwd_saveids(void);
