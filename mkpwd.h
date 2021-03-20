@@ -4,8 +4,6 @@
 #define MKPWD_NO	0
 #define MKPWD_YES	1
 
-#define MKPWD_MAXPWD	256
-
 #define MKPWD_FMT_HEX	-16
 #define MKPWD_FMT_DEC	-10
 #define MKPWD_FMT_OCT	-8
@@ -19,8 +17,12 @@
 #define MKPWD_DIGIT_STRING "0123456789"
 
 struct mkpwd_args {
+	size_t pwdmax;
+
 	const char *pwd;
+	size_t szpwd;
 	const char *id;
+	size_t szid;
 	const void *salt;
 	size_t szsalt;
 
