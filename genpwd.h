@@ -41,8 +41,9 @@ typedef TF_BYTE_TYPE gpwd_byte;
 
 enum { NO, YES };
 
-#define GENPWD_MAXPWD MKPWD_MAXPWD
-#define GENPWD_MAX_SALT GENPWD_MAXPWD
+#define GENPWD_PWD_MAX 4096
+#define XGENPWD_PWD_MAX 256
+#define GENPWD_MAX_SALT 8192
 
 #define NOSIZE ((size_t)-1)
 #define CSTR_SZ(x) (sizeof(x)-1)

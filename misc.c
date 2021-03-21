@@ -2,9 +2,14 @@
 
 void mkpwd_adjust(struct mkpwd_args *mkpwa)
 {
+	mkpwa->pwdmax = GENPWD_PWD_MAX;
+	mkpwa->salt = genpwd_salt;
+	mkpwa->szsalt = genpwd_szsalt;
 	mkpwa->passes = default_passes_number;
 	mkpwa->offset = default_string_offset;
 	mkpwa->length = default_password_length;
+	mkpwa->format = default_password_format;
+	if (default_password_charset) mkpwa->charset = default_password_charset;
 }
 
 gpwd_yesno is_comment(const char *str)
@@ -96,7 +101,7 @@ void *genpwd_read_alloc_file(const char *file, size_t *rsz)
 
 	fd = open(file, O_RDONLY);
 	if (fd == -1) xerror(0, 0, "%s", file);
-	r = genpwd_read_alloc_fd(fd, GENPWD_MAXPWD, 0, rsz);
+	r = genpwd_read_alloc_fd(fd, GENPWD_PWD_MAX, 0, rsz);
 	close(fd);
 	return r;
 }

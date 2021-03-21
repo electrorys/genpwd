@@ -8,6 +8,7 @@ static char *fkeyname;
 static gpwd_yesno genkeyf;
 static int kfd = 1;
 static gpwd_yesno merged = NO;
+static gpwd_yesno do_random_pw = NO;
 
 char *progname;
 
@@ -52,6 +53,7 @@ static void usage(void)
 	genpwd_say("  -M <file>: load ids from file and merge them into current list.");
 	genpwd_say("    After merging, program will terminate. This option can be given multiple times.");
 	genpwd_say("  -N: do not save ID data typed in Name field");
+	genpwd_say("  -R: do not ask for anything, and just generate random password of specified quality.");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
 	genpwd_say("  -l pwlen: sets the cut-out region of 'big-passwd' string");
@@ -100,8 +102,8 @@ int main(int argc, char **argv)
 	progname = genpwd_strdup(basename(*argv));
 	mkpwa = genpwd_malloc(sizeof(struct mkpwd_args));
 	getps = genpwd_malloc(sizeof(struct getpasswd_state));
-	masterpw = genpwd_malloc(GENPWD_MAXPWD);
-	identifier = genpwd_malloc(GENPWD_MAXPWD);
+	masterpw = genpwd_malloc(GENPWD_PWD_MAX);
+	identifier = genpwd_malloc(GENPWD_PWD_MAX);
 
 	s = genpwd_malloc(PATH_MAX);
 	d = getenv("HOME");
@@ -115,7 +117,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:l:ODX89U:CiI:jM:Nkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:l:ODX89U:CiI:jM:NRkw:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -181,6 +183,9 @@ _baddfname:
 				}
 				else genpwd_will_saveids(SAVE_IDS_NEVER);
 				break;
+			case 'R':
+				do_random_pw = YES;
+				break;
 			case 'i':
 				genpwd_listids();
 				break;
@@ -211,9 +216,19 @@ _baddfname:
 
 	if (merged == YES) goto _wriexit;
 
+	mkpwd_adjust(mkpwa);
+
 	mkpwa->pwd = masterpw;
-	mkpwa->salt = genpwd_salt;
-	mkpwa->szsalt = genpwd_szsalt;
+	mkpwa->id = identifier;
+
+	if (do_random_pw == YES) {
+		genpwd_will_saveids(SAVE_IDS_NEVER);
+		genpwd_getrandom(masterpw, genpwd_szalloc(masterpw));
+		genpwd_getrandom(identifier, genpwd_szalloc(identifier));
+		mkpwa->szpwd = genpwd_szalloc(masterpw);
+		mkpwa->szid = genpwd_szalloc(identifier);
+		goto _do_random;
+	}
 
 	getps->fd = getps->efd = -1;
 	getps->passwd = masterpw;
@@ -229,8 +244,6 @@ _baddfname:
 	genpwd_esay("Password hint: %s", mkpwa->result);
 	genpwd_free(mkpwa->result);
 
-	mkpwa->id = identifier;
-
 	getps->fd = getps->efd = -1;
 	getps->passwd = identifier;
 	getps->pwlen = genpwd_szalloc(identifier)-1;
@@ -245,8 +258,7 @@ _baddfname:
 	genpwd_addid(identifier);
 	genpwd_will_saveids(SAVE_IDS_PLEASE);
 
-	mkpwd_adjust(mkpwa);
-
+_do_random:
 	if (fkeyname) {
 		if (!(!strcmp(fkeyname, "-")))
 			kfd = creat(fkeyname, S_IRUSR | S_IWUSR);
@@ -254,8 +266,6 @@ _baddfname:
 		if (kfd != 1) no_newline = YES;
 	}
 
-	mkpwa->format = default_password_format;
-	if (default_password_charset) mkpwa->charset = default_password_charset;
 	if (!genkeyf) {
 		if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
 			xerror(NO, YES, "%s", mkpwa->error);

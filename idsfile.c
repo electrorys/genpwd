@@ -130,7 +130,7 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 	tf_tweak_set(key, tweak);
 	memset(tweak, 0, sizeof(tweak));
 
-	ret = genpwd_read_alloc_fd(fd, GENPWD_MAXPWD, 0, &sz);
+	ret = genpwd_read_alloc_fd(fd, GENPWD_PWD_MAX, 0, &sz);
 	if (!ret) goto _err;
 
 	/* check this before decrypt data + MAC checksum */
