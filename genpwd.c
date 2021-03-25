@@ -277,6 +277,7 @@ _do_random:
 		write(kfd, mkpwa->result, mkpwa->szresult);
 	}
 
+	genpwd_free(mkpwa->result);
 	if (kfd != 1) close(kfd);
 _wriexit:
 	genpwd_saveids();

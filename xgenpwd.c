@@ -290,7 +290,6 @@ static void process_entries(void)
 	char *title, *fmt;
 
 	mkpwd_adjust(mkpwa);
-	mkpwa->pwdmax = XGENPWD_PWD_MAX;
 
 	if (do_random_pw == YES) {
 		genpwd_will_saveids(SAVE_IDS_NEVER);
