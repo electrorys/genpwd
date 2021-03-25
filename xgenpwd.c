@@ -17,7 +17,9 @@ static gpwd_yesno do_random_pw = NO;
 
 static FL_FORM *form;
 static Window win;
-static FL_OBJECT *masterpw, *identifier, *mhashbox, *outbox, *idsbr, *pwlcnt;
+static FL_OBJECT *masterpw, *identifier, *mhashbox, *outbox, *idsbr;
+static FL_OBJECT *pwlcnt, *pwloffs;
+static FL_OBJECT *pwlfmt, *pwlchrs;
 static FL_OBJECT *maspwbut, *idbut, *mkbutton, *copybutton, *clearbutton, *quitbutton;
 static FL_OBJECT *search, *srchup, *srchdown;
 static FL_OBJECT *hidepw;
@@ -205,8 +207,56 @@ static void searchitemdown(void)
 
 static void set_password_length(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
 {
-	default_password_length = (int)fl_get_counter_value(pwlcnt);
+	default_password_length = (size_t)fl_get_counter_value(pwlcnt);
 }
+
+static void set_password_offset(FL_OBJECT *obj FL_UNUSED_ARG, long data FL_UNUSED_ARG)
+{
+	default_string_offset = (size_t)fl_get_counter_value(pwloffs);
+}
+
+static void set_password_format(FL_OBJECT *obj, long data FL_UNUSED_ARG)
+{
+	int fmt = fl_get_select_item(obj)->val;
+	const char *chrs;
+
+	if (fmt != 6) fl_deactivate_object(pwlchrs);
+	if (fmt == 6 || fmt == 7) fl_deactivate_object(pwloffs);
+	else fl_activate_object(pwloffs);
+	switch (fmt) {
+		case 0: default_password_format = MKPWD_FMT_HEX; break;
+		case 1: default_password_format = MKPWD_FMT_DEC; break;
+		case 2: default_password_format = MKPWD_FMT_OCT; break;
+		case 3: default_password_format = MKPWD_FMT_B64; break;
+		case 4: default_password_format = MKPWD_FMT_A85; break;
+		case 5: default_password_format = MKPWD_FMT_A95; break;
+		case 6: default_password_format = MKPWD_FMT_UNIV;
+			fl_activate_object(pwlchrs);
+			chrs = fl_get_input(pwlchrs);
+			if (!strcmp(chrs, GENPWD_ALNUM_STRING_NAME))
+				chrs = GENPWD_ALNUM_STRING;
+			else if (!strcmp(chrs, GENPWD_ALPHA_STRING_NAME))
+				chrs = GENPWD_ALPHA_STRING;
+			else if (!strcmp(chrs, GENPWD_DIGIT_STRING_NAME))
+				chrs = GENPWD_DIGIT_STRING;
+			else if (!strcmp(chrs, GENPWD_XDIGIT_STRING_NAME))
+				chrs = GENPWD_XDIGIT_STRING;
+			else if (!strcmp(chrs, GENPWD_UXDIGIT_STRING_NAME))
+				chrs = GENPWD_UXDIGIT_STRING;
+			else if (!strcmp(chrs, GENPWD_ASCII_STRING_NAME))
+				chrs = GENPWD_ASCII_STRING;
+			else if (!strcmp(chrs, GENPWD_LOWER_STRING_NAME))
+				chrs = GENPWD_LOWER_STRING;
+			else if (!strcmp(chrs, GENPWD_UPPER_STRING_NAME))
+				chrs = GENPWD_UPPER_STRING;
+			if (str_empty(chrs)) chrs = GENPWD_ALNUM_STRING_NAME;
+			genpwd_free(default_password_charset);
+			default_password_charset = genpwd_strdup(chrs);
+			break;
+		case 7: default_password_format = MKPWD_FMT_CPWD; break;
+	}
+}
+
 
 static void set_output_label_size(int output_passwd_length)
 {
@@ -254,6 +304,9 @@ static void process_entries(void)
 		mkpwa->szid = genpwd_szalloc(s_identifier);
 	}
 	else {
+		set_password_format(pwlfmt, 0);
+		mkpwa->charset = default_password_charset;
+
 		mkpwa->pwd = fl_get_input(masterpw);
 		mkpwa->id = fl_get_input(identifier);
 		if (str_empty(mkpwa->id)) return;
@@ -570,7 +623,7 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	fl_set_border_width(-1);
 	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 410);
+	form = fl_bgn_form(FL_BORDER_BOX, 280, 440);
 
 	masterpw = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(masterpw, FL_RETURN_CHANGED);
@@ -610,22 +663,62 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	fl_set_object_shortcut(hidepw, "^X", 0);
 	if (do_not_show) fl_set_button(hidepw, 1);
 
-	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355, 270, 20, NULL);
+	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355, 80, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
 	fl_set_counter_value(pwlcnt, (double)default_password_length);
 	fl_set_counter_bounds(pwlcnt, (double)0, (double)GENPWD_PWD_MAX);
 	fl_set_counter_step(pwlcnt, (double)1, (double)0);
 	fl_set_counter_repeat(pwlcnt, 150);
-	fl_set_counter_min_repeat(pwlcnt, 25);
+	fl_set_counter_min_repeat(pwlcnt, 15);
 	fl_set_object_callback(pwlcnt, set_password_length, 0);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 380, 60, 25, "Make");
+	pwloffs = fl_add_counter(FL_SIMPLE_COUNTER, 90, 355, 80, 20, NULL);
+	fl_set_counter_precision(pwloffs, 0);
+	fl_set_counter_value(pwloffs, (double)default_password_length);
+	fl_set_counter_bounds(pwloffs, (double)0, (double)GENPWD_PWD_MAX);
+	fl_set_counter_step(pwloffs, (double)1, (double)0);
+	fl_set_counter_repeat(pwloffs, 150);
+	fl_set_counter_min_repeat(pwloffs, 15);
+	fl_set_object_callback(pwloffs, set_password_offset, 0);
+
+	pwlchrs = fl_add_input(FL_NORMAL_INPUT, 5, 380, 270, 25, NULL);
+	fl_set_object_return(pwlchrs, FL_RETURN_CHANGED);
+	fl_deactivate_object(pwlchrs);
+	fl_set_input(pwlchrs, GENPWD_ALNUM_STRING_NAME);
+
+	pwlfmt = fl_add_select(FL_DROPLIST_SELECT, 175, 355, 100, 20, NULL);
+	fl_add_select_items(pwlfmt, "Heximal");
+	fl_add_select_items(pwlfmt, "Decimal");
+	fl_add_select_items(pwlfmt, "Octal");
+	fl_add_select_items(pwlfmt, "Base64");
+	fl_add_select_items(pwlfmt, "Ascii85");
+	fl_add_select_items(pwlfmt, "Ascii95");
+	fl_add_select_items(pwlfmt, "UnivPwd");
+	fl_add_select_items(pwlfmt, "RandPwd");
+	fl_set_select_policy(pwlfmt, FL_POPUP_NORMAL_SELECT);
+	switch (default_password_format) {
+		case MKPWD_FMT_HEX: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 0)); break;
+		case MKPWD_FMT_DEC: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 1)); break;
+		case MKPWD_FMT_OCT: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 2)); break;
+		case MKPWD_FMT_B64: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 3)); break;
+		case MKPWD_FMT_A85: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 4)); break;
+		case MKPWD_FMT_A95: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 5)); break;
+		case MKPWD_FMT_UNIV:
+			fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 6));
+			fl_activate_object(pwlchrs);
+			fl_set_input(pwlchrs, default_password_charset);
+			break;
+		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 7)); break;
+	}
+	fl_set_object_callback(pwlfmt, set_password_format, 0);
+
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 410, 60, 25, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 380, 60, 25, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 410, 60, 25, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 380, 60, 25, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 410, 60, 25, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 380, 60, 25, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 410, 60, 25, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
