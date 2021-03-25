@@ -28,8 +28,6 @@ struct mkpwd_args {
 
 	short format;
 	char *charset;
-	char charstart;
-	char charend;
 	size_t passes;
 	size_t offset;
 	size_t length;

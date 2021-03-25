@@ -126,7 +126,7 @@ int mkpwd(struct mkpwd_args *mkpwa)
 
 		s = bpw;
 		for (x = 0; x < mkpwa->length/2; x++) {
-_tryagainc1:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
+_tryagainc1:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0x20, (TF_UNIT_TYPE)0x7f);
 			if (strchr(MKPWD_ALPHA_STRING, c)) {
 				*s = c;
 				s++;
@@ -134,7 +134,7 @@ _tryagainc1:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
 			else goto _tryagainc1;
 		}
 		for (; x < mkpwa->length; x++) {
-_tryagainc2:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
+_tryagainc2:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0x20, (TF_UNIT_TYPE)0x7f);
 			if (strchr(MKPWD_DIGIT_STRING, c)) {
 				*s = c;
 				s++;
@@ -144,7 +144,7 @@ _tryagainc2:		c = (char)tf_prng_range_r(rndata, 0x20, 0x7f);
 
 		s = ret; d = bpw;
 		for (x = 0; x < mkpwa->length; x++) {
-_tryagainc3:		i = (size_t)tf_prng_range_r(rndata, 0, (TF_UNIT_TYPE)mkpwa->length-1);
+_tryagainc3:		i = (size_t)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0, (TF_UNIT_TYPE)mkpwa->length-1);
 			if (d[i] == '\0') goto _tryagainc3;
 			*s = d[i];
 			s++;
@@ -159,17 +159,24 @@ _tryagainc3:		i = (size_t)tf_prng_range_r(rndata, 0, (TF_UNIT_TYPE)mkpwa->length
 		void *rndata;
 		char c, *s = ret;
 		size_t x;
-
-		if (mkpwa->charstart == '\0') mkpwa->charstart = 0x20;
-		if (mkpwa->charend == '\0') mkpwa->charend = 0x7f;
+		unsigned char S, E;
 
 		bpw = genpwd_realloc(bpw, TF_KEY_SIZE);
 		rndata = genpwd_malloc(tf_prng_datasize());
 
 		tf_prng_seedkey_r(rndata, bpw);
 
+		if (!mkpwa->charset) {
+			S = 0x20;
+			E = 0x7f;
+		}
+		else {
+			S = 1;
+			E = (unsigned char)UCHAR_MAX;
+		}
+
 		for (x = 0; x < mkpwa->length; x++) {
-_tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)mkpwa->charstart, (TF_UNIT_TYPE)mkpwa->charend);
+_tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)S, (TF_UNIT_TYPE)E);
 			if (mkpwa->charset) {
 				if (strchr(mkpwa->charset, c)) {
 					*s = c;
