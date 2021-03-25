@@ -262,7 +262,9 @@ static void set_output_label_size(int output_passwd_length)
 {
 	int lsize;
 
-	if (output_passwd_length <= 18) lsize = FL_MEDIUM_SIZE;
+	if (output_passwd_length <= 10) lsize = FL_HUGE_SIZE;
+	else if (output_passwd_length <= 14) lsize = FL_LARGE_SIZE;
+	else if (output_passwd_length <= 18) lsize = FL_MEDIUM_SIZE;
 	else if (output_passwd_length <= 25) lsize = FL_NORMAL_SIZE;
 	else if (output_passwd_length <= 32) lsize = FL_SMALL_SIZE;
 	else lsize = FL_TINY_SIZE;
@@ -290,6 +292,8 @@ static void process_entries(void)
 	char *title, *fmt;
 
 	mkpwd_adjust(mkpwa);
+	set_password_format(pwlfmt, 0);
+	mkpwa->charset = default_password_charset;
 
 	if (do_random_pw == YES) {
 		genpwd_will_saveids(SAVE_IDS_NEVER);
@@ -303,9 +307,6 @@ static void process_entries(void)
 		mkpwa->szid = genpwd_szalloc(s_identifier);
 	}
 	else {
-		set_password_format(pwlfmt, 0);
-		mkpwa->charset = default_password_charset;
-
 		mkpwa->pwd = fl_get_input(masterpw);
 		mkpwa->id = fl_get_input(identifier);
 		if (str_empty(mkpwa->id)) return;
@@ -333,7 +334,7 @@ _inval:		set_output_label_size(strlen(mkpwa->error));
 		fl_set_object_label(outbox, mkpwa->result);
 	}
 
-	fl_deactivate_object(masterpw);
+	if (masterpw) fl_deactivate_object(masterpw);
 	genpwd_free(mkpwa->result);
 	if (do_random_pw == YES) {
 		genpwd_free(s_masterpw);
@@ -390,22 +391,27 @@ static void safe_zero_object_label(FL_OBJECT *obj)
 
 static void clearentries(void)
 {
-	clearinput(masterpw);
-	fl_set_input_maxchars(masterpw, 64);
-	fl_activate_object(masterpw);
-	clearinput(identifier);
+	if (masterpw) {
+		clearinput(masterpw);
+		fl_set_input_maxchars(masterpw, 64);
+		fl_activate_object(masterpw);
+	}
+	if (identifier) clearinput(identifier);
 
 	safe_zero_object_label(outbox);
 	fl_set_object_label(outbox, " -- ");
-	safe_zero_object_label(mhashbox);
-	fl_set_object_label(mhashbox, " -- ");
 
-	clearinput(search);
-	fl_set_object_color(search, srchcol1, srchcol2);
+	if (mhashbox) {
+		safe_zero_object_label(mhashbox);
+		fl_set_object_label(mhashbox, " -- ");
+	}
+
+	if (search) clearinput(search);
+	if (search) fl_set_object_color(search, srchcol1, srchcol2);
 
 	fl_wintitle(win, progname);
-	fl_set_focus_object(form, masterpw);
-	fl_deselect_browser(idsbr);
+	if (masterpw) fl_set_focus_object(form, masterpw);
+	if (idsbr) fl_deselect_browser(idsbr);
 }
 
 static void removeitem(void)
@@ -423,6 +429,7 @@ int main(int argc, char **argv)
 	int c;
 	char *s, *d;
 	size_t x;
+	FL_COORD yoffs = 0;
 
 	install_signals();
 
@@ -622,7 +629,12 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	fl_set_border_width(-1);
 	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
 
-	form = fl_bgn_form(FL_BORDER_BOX, 280, 440);
+	if (do_random_pw == YES) {
+		form = fl_bgn_form(FL_BORDER_BOX, 280, 145);
+		yoffs = 295;
+		goto _do_x_random;
+	}
+	else form = fl_bgn_form(FL_BORDER_BOX, 280, 440);
 
 	masterpw = fl_add_input(FL_SECRET_INPUT, 5, 5, 205, 25, NULL);
 	fl_set_object_return(masterpw, FL_RETURN_CHANGED);
@@ -655,14 +667,15 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	srchdown = fl_add_button(FL_NORMAL_BUTTON, 250, 270, 25, 25, "@2>");
 	fl_set_object_shortcut(srchdown, "^N", 0);
 
-	outbox = fl_add_box(FL_SHADOW_BOX, 5, 300, 270, 50, " -- ");
+_do_x_random:
+	outbox = fl_add_box(FL_SHADOW_BOX, 5, 300 - yoffs, 270, 50, " -- ");
 	fl_set_object_lstyle(outbox, FL_FIXED_STYLE|FL_BOLD_STYLE);
 
-	hidepw = fl_add_button(FL_PUSH_BUTTON, 253, 301, 20, 20, "@9+");
+	hidepw = fl_add_button(FL_PUSH_BUTTON, 253, 301 - yoffs, 20, 20, "@9+");
 	fl_set_object_shortcut(hidepw, "^X", 0);
 	if (do_not_show) fl_set_button(hidepw, 1);
 
-	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355, 80, 20, NULL);
+	pwlcnt = fl_add_counter(FL_SIMPLE_COUNTER, 5, 355 - yoffs, 80, 20, NULL);
 	fl_set_counter_precision(pwlcnt, 0);
 	fl_set_counter_value(pwlcnt, (double)default_password_length);
 	fl_set_counter_bounds(pwlcnt, (double)0, (double)GENPWD_PWD_MAX);
@@ -671,7 +684,7 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	fl_set_counter_min_repeat(pwlcnt, 15);
 	fl_set_object_callback(pwlcnt, set_password_length, 0);
 
-	pwloffs = fl_add_counter(FL_SIMPLE_COUNTER, 90, 355, 80, 20, NULL);
+	pwloffs = fl_add_counter(FL_SIMPLE_COUNTER, 90, 355 - yoffs, 80, 20, NULL);
 	fl_set_counter_precision(pwloffs, 0);
 	fl_set_counter_value(pwloffs, (double)default_password_length);
 	fl_set_counter_bounds(pwloffs, (double)0, (double)GENPWD_PWD_MAX);
@@ -680,12 +693,12 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	fl_set_counter_min_repeat(pwloffs, 15);
 	fl_set_object_callback(pwloffs, set_password_offset, 0);
 
-	pwlchrs = fl_add_input(FL_NORMAL_INPUT, 5, 380, 270, 25, NULL);
+	pwlchrs = fl_add_input(FL_NORMAL_INPUT, 5, 380 - yoffs, 270, 25, NULL);
 	fl_set_object_return(pwlchrs, FL_RETURN_CHANGED);
 	fl_deactivate_object(pwlchrs);
 	fl_set_input(pwlchrs, GENPWD_ALNUM_STRING_NAME);
 
-	pwlfmt = fl_add_select(FL_DROPLIST_SELECT, 175, 355, 100, 20, NULL);
+	pwlfmt = fl_add_select(FL_DROPLIST_SELECT, 175, 355 - yoffs, 100, 20, NULL);
 	fl_add_select_items(pwlfmt, "Heximal");
 	fl_add_select_items(pwlfmt, "Decimal");
 	fl_add_select_items(pwlfmt, "Octal");
@@ -704,20 +717,23 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 		case MKPWD_FMT_A95: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 5)); break;
 		case MKPWD_FMT_UNIV:
 			fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 6));
+			fl_deactivate_object(pwloffs);
 			fl_activate_object(pwlchrs);
 			fl_set_input(pwlchrs, default_password_charset);
 			break;
-		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 7)); break;
+		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 7));
+			fl_deactivate_object(pwloffs);
+			break;
 	}
 	fl_set_object_callback(pwlfmt, set_password_format, 0);
 
-	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 410, 60, 25, "Make");
+	mkbutton = fl_add_button(FL_NORMAL_BUTTON, 5, 410 - yoffs, 60, 25, "Make");
 	fl_set_object_shortcut(mkbutton, "^M", 0);
-	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 410, 60, 25, "Copy");
+	copybutton = fl_add_button(FL_NORMAL_BUTTON, 75, 410 - yoffs, 60, 25, "Copy");
 	fl_set_object_shortcut(copybutton, "^B", 0);
-	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 410, 60, 25, "Clear");
+	clearbutton = fl_add_button(FL_NORMAL_BUTTON, 145, 410 - yoffs, 60, 25, "Clear");
 	fl_set_object_shortcut(clearbutton, "^L", 0);
-	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 410, 60, 25, "Quit");
+	quitbutton = fl_add_button(FL_NORMAL_BUTTON, 215, 410 - yoffs, 60, 25, "Quit");
 	fl_set_object_shortcut(quitbutton, "^[", 0);
 
 	fl_end_form();
@@ -737,24 +753,33 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 		else if (called == clearbutton)
 			clearentries();
 		else if (called == maspwbut) {
-			clearinput(masterpw);
-			fl_set_input_maxchars(masterpw, 64);
-			fl_activate_object(masterpw);
-			fl_set_focus_object(form, masterpw);
-			safe_zero_object_label(mhashbox);
-			fl_set_object_label(mhashbox, " -- ");
+			if (masterpw) {
+				clearinput(masterpw);
+				fl_set_input_maxchars(masterpw, 64);
+				fl_activate_object(masterpw);
+				fl_set_focus_object(form, masterpw);
+			}
+			if (mhashbox) {
+				safe_zero_object_label(mhashbox);
+				fl_set_object_label(mhashbox, " -- ");
+			}
 		}
 		else if (called == idbut) {
-			clearinput(identifier);
-			fl_set_focus_object(form, identifier);
-			removeitem();
+			if (identifier) {
+				clearinput(identifier);
+				fl_set_focus_object(form, identifier);
+			}
+			if (idsbr) removeitem();
 		}
-		else if (called == search)
-			searchitem();
-		else if (called == srchup)
-			searchitemup();
-		else if (called == srchdown)
-			searchitemdown();
+		else if (called == search) {
+			if (idsbr && search) searchitem();
+		}
+		else if (called == srchup) {
+			if (idsbr && search && srchup) searchitemup();
+		}
+		else if (called == srchdown) {
+			if (idsbr && search && srchdown) searchitemdown();
+		}
 		else if (called == hidepw)
 			hidepwd();
 		else if (called == quitbutton) break;
