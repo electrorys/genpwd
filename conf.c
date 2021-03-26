@@ -37,9 +37,9 @@ _spc2:		t = strchr(d, ' ');
 		if (!t) goto _nspc;
 		*t = 0; d = t+1; goto _spc2;
 _nspc:
-		if (!strcmp(s, "default_passes_number")) {
-			default_passes_number = strtoul(d, &stoi, 10);
-			if (!str_empty(stoi)) xerror(NO, YES, "[%s] %s: invalid passes number", path, d);
+		if (!strcmp(s, "default_turns_number")) {
+			default_turns_number = strtoul(d, &stoi, 10);
+			if (!str_empty(stoi)) xerror(NO, YES, "[%s] %s: invalid turns number", path, d);
 		}
 		else if (!strcmp(s, "default_string_offset")) {
 			default_string_offset = strtoul(d, &stoi, 10);
@@ -51,11 +51,6 @@ _nspc:
 		}
 		else if (!strcmp(s, "default_password_format")) {
 			if (!strcasecmp(d, CPPSTR(MKPWD_FMT_B64)) || !strcasecmp(d, "default")) default_password_format = MKPWD_FMT_B64;
-			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_A85)) || !strcasecmp(d, "8")) default_password_format = MKPWD_FMT_A85;
-			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_A95)) || !strcasecmp(d, "9")) default_password_format = MKPWD_FMT_A95;
-			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_HEX)) || !strcasecmp(d, "X")) default_password_format = MKPWD_FMT_HEX;
-			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_DEC)) || !strcasecmp(d, "D")) default_password_format = MKPWD_FMT_DEC;
-			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_OCT)) || !strcasecmp(d, "O")) default_password_format = MKPWD_FMT_OCT;
 			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_CPWD)) || !strcasecmp(d, "C")) default_password_format = MKPWD_FMT_CPWD;
 			else if (!strcasecmp(d, CPPSTR(MKPWD_FMT_UNIV)) || !strcasecmp(d, "U")) {
 				default_password_format = MKPWD_FMT_UNIV;
@@ -102,7 +97,7 @@ void genpwd_hash_defaults(char *uhash, size_t szuhash)
 	skein_update(&sk, genpwd_salt, genpwd_szsalt);
 
 	memset(shash, 0, sizeof(shash));
-	sprintf(shash, "%zu", default_passes_number);
+	sprintf(shash, "%zu", default_turns_number);
 	skein_update(&sk, shash, strlen(shash));
 
 	memset(shash, 0, sizeof(shash));

@@ -122,8 +122,8 @@ static int decrypt_ids(int fd, char **data, size_t *dsz)
 	if (!ctr) goto _err;
 
 	skein(key, TF_MAX_BITS, genpwd_salt, genpwd_szsalt);
-	if (default_passes_number) {
-		for (x = 0; x < default_passes_number; x++)
+	if (default_turns_number) {
+		for (x = 0; x < default_turns_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
 	skein(tweak, TF_NR_TWEAK_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
@@ -175,8 +175,8 @@ static void encrypt_ids(int fd, char *data, size_t dsz)
 	write(fd, ctr, TF_BLOCK_SIZE);
 
 	skein(key, TF_MAX_BITS, genpwd_salt, genpwd_szsalt);
-	if (default_passes_number) {
-		for (x = 0; x < default_passes_number; x++)
+	if (default_turns_number) {
+		for (x = 0; x < default_turns_number; x++)
 			skein(key, TF_MAX_BITS, key, TF_FROM_BITS(TF_MAX_BITS));
 	}
 	skein(tweak, TF_NR_TWEAK_BITS, key, TF_FROM_BITS(TF_MAX_BITS));

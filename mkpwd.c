@@ -30,21 +30,11 @@ static void init_mkpwa(struct mkpwd_args *mkpwa)
 	if (mkpwa->pwdmax == 0 || mkpwa->pwdmax >= SIZE_MAX) mkpwa->pwdmax = 256;
 }
 
-#define reterror(p, s) do { 					\
-		genpwd_free(bpw);				\
-		genpwd_free(ret);				\
-		if (p) genpwd_free(p);				\
-		mkpwa->result = NULL;				\
-		mkpwa->szresult = 0;				\
-		if (s) mkpwa->error = genpwd_strdup(s);		\
-		else mkpwa->error = NULL;			\
-		return MKPWD_NO;				\
-	} while (0)
 int mkpwd(struct mkpwd_args *mkpwa)
 {
 	struct skein sk;
-	void *ret, *bpw;
-	char *uret;
+	void *r, *bpw, *rndata;
+	char *ur;
 	size_t x;
 
 	if (!mkpwa) return MKPWD_NO;
@@ -52,12 +42,11 @@ int mkpwd(struct mkpwd_args *mkpwa)
 	if (!mkpwa->pwd
 	|| !mkpwa->salt
 	|| !mkpwa->id
-	|| mkpwa->format == 0
 	|| mkpwa->length == 0
 	|| mkpwa->length >= mkpwa->pwdmax) return MKPWD_NO;
 
 	bpw = genpwd_malloc(SKEIN_DIGEST_SIZE);
-	ret = genpwd_malloc(mkpwa->pwdmax);
+	r = genpwd_malloc(mkpwa->pwdmax);
 
 	skein_init(&sk, TF_MAX_BITS);
 	skein_update(&sk, mkpwa->pwd, mkpwa->szpwd ? mkpwa->szpwd : strnlen(mkpwa->pwd, mkpwa->pwdmax));
@@ -65,57 +54,16 @@ int mkpwd(struct mkpwd_args *mkpwa)
 	skein_update(&sk, mkpwa->id, mkpwa->szid ? mkpwa->szid : strnlen(mkpwa->id, mkpwa->pwdmax));
 	skein_final(bpw, &sk);
 
-	if (mkpwa->passes) {
-		for (x = 0; x < mkpwa->passes; x++)
+	if (mkpwa->turns > 0) {
+		for (x = 0; x < mkpwa->turns; x++)
 			skein(bpw, TF_MAX_BITS, bpw, SKEIN_DIGEST_SIZE);
 	}
 
 	if (mkpwa->format == MKPWD_FMT_B64) {
-		base64_encode(ret, bpw, TF_KEY_SIZE);
-		remove_chars(ret, mkpwa->pwdmax, "./+=");
-	}
-	else if (mkpwa->format == MKPWD_FMT_A85) {
-		base85_encode(ret, bpw, TF_KEY_SIZE);
-	}
-	else if (mkpwa->format == MKPWD_FMT_A95) {
-		base95_encode(ret, bpw, TF_KEY_SIZE);
-	}
-	else if (mkpwa->format < 0) {
-		void *tp = genpwd_malloc(4);
-		unsigned char *ubpw;
-		char *utp, *uret;
-		size_t d, y;
-
-		ret = genpwd_realloc(ret, genpwd_szalloc(ret)+(mkpwa->pwdmax/4));
-
-		for (x = 0, d = 0, ubpw = bpw, uret = ret, utp = tp; x < TF_KEY_SIZE; x++) {
-			switch (mkpwa->format) {
-			case MKPWD_FMT_DEC:
-				y = snprintf(utp, 4, "%hhu", ubpw[x]);
-				if (ubpw[x] > 100) {
-					if (utp[0] == '1') utp[2]++;
-					if (utp[0] == '2') utp[2] += 2;
-					if (utp[2] > '9') utp[2] -= 10;
-					y--;
-				}
-				xstrlcpy(uret+d,
-					ubpw[x] > 100 ? utp+1 : utp,
-					mkpwa->pwdmax - d);
-				d += y;
-				break;
-			case MKPWD_FMT_HEX:
-				d += snprintf(uret+d, 3, "%hhx", ubpw[x]);
-				break;
-			case MKPWD_FMT_OCT:
-				d += snprintf(uret+d, 4, "%hho", ubpw[x]);
-				break;
-			}
-		}
-
-		genpwd_free(tp);
+		base64_encode(r, bpw, TF_KEY_SIZE);
+		remove_chars(r, mkpwa->pwdmax, "./+=");
 	}
 	else if (mkpwa->format == MKPWD_FMT_CPWD) {
-		void *rndata;
 		char c, *s, *d;
 		size_t x, i;
 
@@ -142,7 +90,7 @@ _tryagainc2:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0x20, (TF_UNIT_TYP
 			else goto _tryagainc2;
 		}
 
-		s = ret; d = bpw;
+		s = r; d = bpw;
 		for (x = 0; x < mkpwa->length; x++) {
 _tryagainc3:		i = (size_t)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0, (TF_UNIT_TYPE)mkpwa->length-1);
 			if (d[i] == '\0') goto _tryagainc3;
@@ -156,8 +104,7 @@ _tryagainc3:		i = (size_t)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0, (TF_UNIT_TYPE
 		goto _ret;
 	}
 	else if (mkpwa->format == MKPWD_FMT_UNIV) {
-		void *rndata;
-		char c, *s = ret;
+		char c, *s;
 		size_t x;
 		unsigned char S, E;
 
@@ -175,7 +122,7 @@ _tryagainc3:		i = (size_t)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0, (TF_UNIT_TYPE
 			E = (unsigned char)UCHAR_MAX;
 		}
 
-		for (x = 0; x < mkpwa->length; x++) {
+		for (x = 0, s = r; x < mkpwa->length; x++) {
 _tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)S, (TF_UNIT_TYPE)E);
 			if (mkpwa->charset) {
 				if (strchr(mkpwa->charset, c)) {
@@ -194,27 +141,31 @@ _tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)S, (TF_UNIT_TYPE)E)
 		genpwd_free(rndata);
 		goto _ret;
 	}
-	else reterror(NULL, "Unsupported mkpwd format");
+	else {
+		genpwd_free(bpw);
+		genpwd_free(r);
+		mkpwa->result = NULL;
+		mkpwa->szresult = 0;
+		return MKPWD_NO;
+	}
 
-	uret = ret;
-	memmove(ret, uret+mkpwa->offset, mkpwa->length);
-	memset(uret+mkpwa->length, 0, mkpwa->pwdmax - mkpwa->length);
+	ur = r;
+	memmove(r, ur+mkpwa->offset, mkpwa->length);
+	memset(ur+mkpwa->length, 0, mkpwa->pwdmax - mkpwa->length);
 
 _ret:	genpwd_free(bpw);
-	uret = ret;
-	mkpwa->szresult = strnlen(uret, mkpwa->pwdmax);
-	ret = genpwd_realloc(ret, mkpwa->szresult+1);
-	mkpwa->result = ret;
-	mkpwa->error = NULL;
+	ur = r;
+	mkpwa->szresult = strnlen(ur, mkpwa->pwdmax);
+	r = genpwd_realloc(r, mkpwa->szresult+1);
+	mkpwa->result = r;
 	return MKPWD_YES;
 }
-#undef reterror
 
 int mkpwd_key(struct mkpwd_args *mkpwa)
 {
 	struct skein sk;
 	size_t x;
-	void *ret;
+	void *r;
 
 	if (!mkpwa) return MKPWD_NO;
 	init_mkpwa(mkpwa);
@@ -222,29 +173,28 @@ int mkpwd_key(struct mkpwd_args *mkpwa)
 	|| (!mkpwa->salt || mkpwa->szsalt == 0)
 	|| !mkpwa->id) return MKPWD_NO;
 
-	ret = genpwd_malloc(mkpwa->length);
+	r = genpwd_malloc(mkpwa->length);
 
 	skein_init(&sk, TF_TO_BITS(mkpwa->length));
 	skein_update(&sk, mkpwa->pwd, mkpwa->szpwd ? mkpwa->szpwd : strnlen(mkpwa->pwd, mkpwa->pwdmax));
 	skein_update(&sk, mkpwa->salt, mkpwa->szsalt ? mkpwa->szsalt : strnlen(mkpwa->salt, mkpwa->pwdmax));
 	skein_update(&sk, mkpwa->id, mkpwa->szid ? mkpwa->szid : strnlen(mkpwa->id, mkpwa->pwdmax));
-	skein_final(ret, &sk);
+	skein_final(r, &sk);
 
-	if (mkpwa->passes) {
-		for (x = 0; x < mkpwa->passes; x++)
-			skein(ret, TF_TO_BITS(mkpwa->length), ret, mkpwa->length);
+	if (mkpwa->turns) {
+		for (x = 0; x < mkpwa->turns; x++)
+			skein(r, TF_TO_BITS(mkpwa->length), r, mkpwa->length);
 	}
 
-	mkpwa->result = ret;
+	mkpwa->result = r;
 	mkpwa->szresult = mkpwa->length;
-	mkpwa->error = NULL;
 	return MKPWD_YES;
 }
 
 int mkpwd_hint(struct mkpwd_args *mkpwa)
 {
 	struct skein sk;
-	void *bpw, *ret;
+	void *bpw, *r;
 	char *ubpw;
 
 	if (!mkpwa) return MKPWD_NO;
@@ -253,18 +203,17 @@ int mkpwd_hint(struct mkpwd_args *mkpwa)
 	|| (!mkpwa->salt || mkpwa->szsalt == 0)) return MKPWD_NO;
 
 	bpw = ubpw = genpwd_malloc(TF_FROM_BITS(16));
-	ret = genpwd_malloc(8);
+	r = genpwd_malloc(8);
 
 	skein_init(&sk, 16);
 	skein_update(&sk, mkpwa->pwd, mkpwa->szpwd ? mkpwa->szpwd : strnlen(mkpwa->pwd, mkpwa->pwdmax));
 	skein_update(&sk, mkpwa->salt, mkpwa->szsalt ? mkpwa->szsalt : strnlen(mkpwa->salt, mkpwa->pwdmax));
 	skein_final(bpw, &sk);
 
-	snprintf(ret, 8, "%02hhx%02hhx", ubpw[0], ubpw[1]);
+	snprintf(r, 8, "%02hhx%02hhx", ubpw[0], ubpw[1]);
 
 	genpwd_free(bpw);
-	mkpwa->result = ret;
+	mkpwa->result = r;
 	mkpwa->szresult = 4;
-	mkpwa->error = NULL;
 	return MKPWD_YES;
 }

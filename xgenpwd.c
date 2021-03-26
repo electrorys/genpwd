@@ -56,11 +56,7 @@ static void usage(void)
 	genpwd_say("\n");
 	genpwd_say("  -L <file>: load genpwd defaults from file.");
 	genpwd_say("  -x: do not show password in output box. 'Copy' button will work.");
-	genpwd_say("  -O: output only numeric octal password");
-	genpwd_say("  -D: output only numeric password (useful for pin numeric codes)");
-	genpwd_say("  -X: output hexadecimal password");
-	genpwd_say("  -8: output base85 password");
-	genpwd_say("  -9: output base95 password");
+	genpwd_say("  -B: make password from base64 substring");
 	genpwd_say("  -C: like normal password, but with more digits");
 	genpwd_say("  -U charset: generate password characters from the given charset");
 	genpwd_say("  -U " GENPWD_ALNUM_STRING_NAME ": generate password characters from [a-zA-Z0-9] charset");
@@ -79,7 +75,7 @@ static void usage(void)
 	genpwd_say("  -R: do not ask for anything, and just generate random password of specified quality.");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
-	genpwd_say("  -l pwlen: sets the cut-out region of 'big-passwd' string");
+	genpwd_say("  -l pwlen: sets result password length");
 	genpwd_say("  -w outkey: write key or password to this file");
 	genpwd_say("\n");
 	genpwd_exit(1);
@@ -220,17 +216,12 @@ static void set_password_format(FL_OBJECT *obj, long data FL_UNUSED_ARG)
 	int fmt = fl_get_select_item(obj)->val;
 	const char *chrs;
 
-	if (fmt != 6) fl_deactivate_object(pwlchrs);
-	if (fmt == 6 || fmt == 7) fl_deactivate_object(pwloffs);
-	else fl_activate_object(pwloffs);
+	if (fmt != 1) fl_deactivate_object(pwlchrs);
+	if (fmt == 0) fl_activate_object(pwloffs);
+	else fl_deactivate_object(pwloffs);
 	switch (fmt) {
-		case 0: default_password_format = MKPWD_FMT_HEX; break;
-		case 1: default_password_format = MKPWD_FMT_DEC; break;
-		case 2: default_password_format = MKPWD_FMT_OCT; break;
-		case 3: default_password_format = MKPWD_FMT_B64; break;
-		case 4: default_password_format = MKPWD_FMT_A85; break;
-		case 5: default_password_format = MKPWD_FMT_A95; break;
-		case 6: default_password_format = MKPWD_FMT_UNIV;
+		case 0: default_password_format = MKPWD_FMT_B64; break;
+		case 1: default_password_format = MKPWD_FMT_UNIV;
 			fl_activate_object(pwlchrs);
 			chrs = fl_get_input(pwlchrs);
 			if (!strcmp(chrs, GENPWD_ALNUM_STRING_NAME))
@@ -253,7 +244,7 @@ static void set_password_format(FL_OBJECT *obj, long data FL_UNUSED_ARG)
 			genpwd_free(default_password_charset);
 			default_password_charset = genpwd_strdup(chrs);
 			break;
-		case 7: default_password_format = MKPWD_FMT_CPWD; break;
+		case 2: default_password_format = MKPWD_FMT_CPWD; break;
 	}
 }
 
@@ -311,15 +302,14 @@ static void process_entries(void)
 		mkpwa->id = fl_get_input(identifier);
 		if (str_empty(mkpwa->id)) return;
 
-		if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) goto _inval;
+		if (mkpwd_hint(mkpwa) == MKPWD_NO) goto _inval;
 		fl_set_object_label(mhashbox, mkpwa->result);
 		genpwd_free(mkpwa->result);
 	}
 
-	if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error) goto _inval;
+	if (mkpwd(mkpwa) == MKPWD_NO) goto _inval;
 	if (mkpwa->szresult != default_password_length) {
-_inval:		set_output_label_size(strlen(mkpwa->error));
-		fl_set_object_label(outbox, mkpwa->error);
+_inval:		fl_set_object_label(outbox, "(password generation error)");
 		return;
 	}
 
@@ -453,7 +443,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:xl:ODX89U:CiI:jM:NRkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:xl:U:BCiI:jM:NRkw:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -464,20 +454,8 @@ _baddfname:
 				&& (!str_empty(stoi) || default_password_length <= 0))
 					xerror(NO, YES, "%s: invalid password length number", optarg);
 				break;
-			case 'O':
-				default_password_format = MKPWD_FMT_OCT;
-				break;
-			case 'D':
-				default_password_format = MKPWD_FMT_DEC;
-				break;
-			case 'X':
-				default_password_format = MKPWD_FMT_HEX;
-				break;
-			case '8':
-				default_password_format = MKPWD_FMT_A85;
-				break;
-			case '9':
-				default_password_format = MKPWD_FMT_A95;
+			case 'B':
+				default_password_format = MKPWD_FMT_B64;
 				break;
 			case 'C':
 				default_password_format = MKPWD_FMT_CPWD;
@@ -585,7 +563,7 @@ _baddfname:
 		if (x == NOSIZE) xerror(NO, NO, "getting passwd");
 		if (x == ((size_t)-2)) genpwd_exit(1);
 
-		if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
+		if (mkpwd_hint(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password hint");
 		genpwd_esay("Password hint: %s", mkpwa->result);
 		genpwd_free(mkpwa->result);
 
@@ -609,13 +587,12 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 		if (kfd != 1) no_newline = YES;
 
 		if (!genkeyf) {
-			if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
-				xerror(NO, YES, "%s", mkpwa->error);
+			if (mkpwd(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password");
 			write(kfd, mkpwa->result, mkpwa->szresult);
 			if (!no_newline) write(kfd, "\n", 1);
 		}
 		else {
-			if (mkpwd_key(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
+			if (mkpwd_key(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating keyfile");
 			write(kfd, mkpwa->result, mkpwa->szresult);
 		}
 
@@ -686,7 +663,7 @@ _do_x_random:
 
 	pwloffs = fl_add_counter(FL_SIMPLE_COUNTER, 90, 355 - yoffs, 80, 20, NULL);
 	fl_set_counter_precision(pwloffs, 0);
-	fl_set_counter_value(pwloffs, (double)default_password_length);
+	fl_set_counter_value(pwloffs, (double)default_string_offset);
 	fl_set_counter_bounds(pwloffs, (double)0, (double)GENPWD_PWD_MAX);
 	fl_set_counter_step(pwloffs, (double)1, (double)0);
 	fl_set_counter_repeat(pwloffs, 150);
@@ -699,29 +676,19 @@ _do_x_random:
 	fl_set_input(pwlchrs, GENPWD_ALNUM_STRING_NAME);
 
 	pwlfmt = fl_add_select(FL_DROPLIST_SELECT, 175, 355 - yoffs, 100, 20, NULL);
-	fl_add_select_items(pwlfmt, "Heximal");
-	fl_add_select_items(pwlfmt, "Decimal");
-	fl_add_select_items(pwlfmt, "Octal");
 	fl_add_select_items(pwlfmt, "Base64");
-	fl_add_select_items(pwlfmt, "Ascii85");
-	fl_add_select_items(pwlfmt, "Ascii95");
-	fl_add_select_items(pwlfmt, "UnivPwd");
-	fl_add_select_items(pwlfmt, "RandPwd");
+	fl_add_select_items(pwlfmt, "Charset");
+	fl_add_select_items(pwlfmt, "DigiChr");
 	fl_set_select_policy(pwlfmt, FL_POPUP_NORMAL_SELECT);
 	switch (default_password_format) {
-		case MKPWD_FMT_HEX: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 0)); break;
-		case MKPWD_FMT_DEC: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 1)); break;
-		case MKPWD_FMT_OCT: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 2)); break;
-		case MKPWD_FMT_B64: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 3)); break;
-		case MKPWD_FMT_A85: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 4)); break;
-		case MKPWD_FMT_A95: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 5)); break;
+		case MKPWD_FMT_B64: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 0)); break;
 		case MKPWD_FMT_UNIV:
-			fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 6));
+			fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 1));
 			fl_deactivate_object(pwloffs);
 			fl_activate_object(pwlchrs);
 			fl_set_input(pwlchrs, default_password_charset);
 			break;
-		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 7));
+		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 2));
 			fl_deactivate_object(pwloffs);
 			break;
 	}

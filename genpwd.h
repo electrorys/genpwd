@@ -81,7 +81,7 @@ extern gpwd_byte genpwd_salt[GENPWD_MAX_SALT];
 extern size_t genpwd_szsalt;
 extern size_t default_password_length;
 extern size_t default_string_offset;
-extern size_t default_passes_number;
+extern size_t default_turns_number;
 extern short default_password_format;
 extern char *default_password_charset;
 
@@ -99,9 +99,6 @@ gpwd_yesno genpwd_fgets(char *s, size_t n, FILE *f);
 off_t genpwd_fdsize(int fd);
 void *genpwd_read_alloc_fd(int fd, size_t blksz, size_t max, size_t *rsz);
 void *genpwd_read_alloc_file(const char *file, size_t *rsz);
-
-void base85_encode(char *dst, const unsigned char *src, size_t count);
-void base95_encode(char *dst, const unsigned char *src, size_t count);
 
 void genpwd_init_memory(void);
 void genpwd_exit_memory(void);

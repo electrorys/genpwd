@@ -33,11 +33,7 @@ static void usage(void)
 	genpwd_say("genpwd: generate passwords that could be recalled later.");
 	genpwd_say("\n");
 	genpwd_say("  -L <file>: load genpwd defaults from file.");
-	genpwd_say("  -O: output only numeric octal password");
-	genpwd_say("  -D: output only numeric password (useful for pin numeric codes)");
-	genpwd_say("  -X: output hexadecimal password");
-	genpwd_say("  -8: output base85 password");
-	genpwd_say("  -9: output base95 password");
+	genpwd_say("  -B: make password from base64 substring");
 	genpwd_say("  -C: like normal password, but with more digits");
 	genpwd_say("  -U charset: generate password characters from the given charset");
 	genpwd_say("  -U " GENPWD_ALNUM_STRING_NAME ": generate password characters from [a-zA-Z0-9] charset");
@@ -56,7 +52,7 @@ static void usage(void)
 	genpwd_say("  -R: do not ask for anything, and just generate random password of specified quality.");
 	genpwd_say("  -i: list identifiers from .genpwd.ids");
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
-	genpwd_say("  -l pwlen: sets the cut-out region of 'big-passwd' string");
+	genpwd_say("  -l pwlen: set result password length");
 	genpwd_say("  -w outkey: write key or password to this file");
 	genpwd_say("\n");
 	genpwd_exit(1);
@@ -117,7 +113,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:l:ODX89U:CiI:jM:NRkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:l:U:BCiI:jM:NRkw:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -128,20 +124,8 @@ _baddfname:
 				&& (!str_empty(stoi) || default_password_length == 0))
 					xerror(NO, YES, "%s: invalid password length number", optarg);
 				break;
-			case 'O':
-				default_password_format = MKPWD_FMT_OCT;
-				break;
-			case 'D':
-				default_password_format = MKPWD_FMT_DEC;
-				break;
-			case 'X':
-				default_password_format = MKPWD_FMT_HEX;
-				break;
-			case '8':
-				default_password_format = MKPWD_FMT_A85;
-				break;
-			case '9':
-				default_password_format = MKPWD_FMT_A95;
+			case 'B':
+				default_password_format = MKPWD_FMT_B64;
 				break;
 			case 'C':
 				default_password_format = MKPWD_FMT_CPWD;
@@ -240,7 +224,7 @@ _baddfname:
 	if (x == NOSIZE) xerror(NO, NO, "getting password");
 	if (x == ((size_t)-2)) genpwd_exit(1);
 
-	if (mkpwd_hint(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
+	if (mkpwd_hint(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password hint");
 	genpwd_esay("Password hint: %s", mkpwa->result);
 	genpwd_free(mkpwa->result);
 
@@ -267,13 +251,12 @@ _do_random:
 	}
 
 	if (!genkeyf) {
-		if (mkpwd(mkpwa) == MKPWD_NO && mkpwa->error)
-			xerror(NO, YES, "%s", mkpwa->error);
+		if (mkpwd(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password");
 		write(kfd, mkpwa->result, mkpwa->szresult);
 		if (!no_newline) write(kfd, "\n", 1);
 	}
 	else {
-		if (mkpwd_key(mkpwa) == MKPWD_NO && mkpwa->error) xerror(NO, YES, "%s", mkpwa->error);
+		if (mkpwd_key(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating keyfile");
 		write(kfd, mkpwa->result, mkpwa->szresult);
 	}
 

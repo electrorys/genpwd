@@ -3,7 +3,7 @@
 
 gpwd_yesno genpwd_save_ids = YES;
 
-/* s9eNHc+dVNgc92p/h6qlXXlvf6nQEnK4kOo7uIjVIAg= */
+/* moEcRAeWbF9BGddi/Hm52RC2LkAryffE2hxMrYiwPSo= */
 
 size_t genpwd_szsalt = 8;
 gpwd_byte genpwd_salt[GENPWD_MAX_SALT] = {
@@ -12,7 +12,7 @@ gpwd_byte genpwd_salt[GENPWD_MAX_SALT] = {
 
 size_t default_password_length = 15;
 size_t default_string_offset = 15;
-size_t default_passes_number = 5000;
+size_t default_turns_number = 5000;
 
 short default_password_format = MKPWD_FMT_B64;
 char *default_password_charset = NULL;

@@ -5,7 +5,7 @@ void mkpwd_adjust(struct mkpwd_args *mkpwa)
 	mkpwa->pwdmax = GENPWD_PWD_MAX;
 	mkpwa->salt = genpwd_salt;
 	mkpwa->szsalt = genpwd_szsalt;
-	mkpwa->passes = default_passes_number;
+	mkpwa->turns = default_turns_number;
 	mkpwa->offset = default_string_offset;
 	mkpwa->length = default_password_length;
 	mkpwa->format = default_password_format;
