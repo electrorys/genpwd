@@ -4,6 +4,8 @@
 
 #include "x11icon.lst"
 
+#define CLASSAPPNAME "xgenpwd"
+
 int xwin_assign_icon_bmp(Display *d, Window w, const void *data);
 
 #define TITLE_SHOW_CHARS 16
@@ -81,6 +83,15 @@ static void usage(void)
 	genpwd_say("  -w outkey: write key or password to this file");
 	genpwd_say("\n");
 	genpwd_exit(1);
+}
+
+static void update_classname(void)
+{
+	XClassHint clh;
+	memset(&clh, 0, sizeof(XClassHint));
+	clh.res_name = CLASSAPPNAME;
+	clh.res_class = CLASSAPPNAME;
+	XSetClassHint(fl_get_display(), win, &clh);
 }
 
 static int getps_filter(struct getpasswd_state *getps, char chr, size_t pos)
@@ -606,7 +617,7 @@ _do_random:	if (!(!strcmp(fkeyname, "-")))
 	}
 
 	fl_set_border_width(-1);
-	fl_initialize(&argc, argv, "xgenpwd", NULL, 0);
+	fl_initialize(&argc, argv, CLASSAPPNAME, NULL, 0);
 
 	if (do_random_pw == YES) {
 		form = fl_bgn_form(FL_BORDER_BOX, 280, 145);
@@ -707,10 +718,9 @@ _do_x_random:
 
 	fl_end_form();
 
-	fl_show_form(form, FL_PLACE_CENTER, FL_FULLBORDER, "xgenpwd");
-
-	win = fl_winget();
-
+	win = fl_prepare_form_window(form, FL_PLACE_CENTER, FL_FULLBORDER, CLASSAPPNAME);
+	update_classname();
+	fl_show_form_window(form);
 	xwin_assign_icon_bmp(fl_get_display(), win, x11_icon_bmp);
 	fl_set_cursor(win, XC_left_ptr);
 
