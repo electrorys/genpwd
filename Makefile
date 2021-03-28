@@ -22,7 +22,7 @@ XFORMS_STATIC_LDFLAGS:=-lforms -lfreetype -L/local/X11/lib -Wl,-rpath-link -Wl,/
 
 SRCS = $(wildcard *.c)
 HDRS = $(wildcard *.h)
-GENPWD_OBJS = $(filter-out xgenpwd.o, $(SRCS:.c=.o))
+GENPWD_OBJS = $(filter-out xgenpwd.o x11icon.o, $(SRCS:.c=.o))
 XGENPWD_OBJS = $(filter-out genpwd.o, $(SRCS:.c=.o))
 
 default: genpwd
@@ -30,6 +30,9 @@ all: genpwd xgenpwd
 
 %.o: %.c VERSION $(HDRS)
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+x11icon.o: x11icon.c
+	$(CC) $(CFLAGS) $(XFORMS_CFLAGS) -c -o $@ $<
 
 xgenpwd.o: xgenpwd.c
 	$(CC) $(CFLAGS) $(XFORMS_CFLAGS) -c -o $@ $<

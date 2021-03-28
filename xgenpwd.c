@@ -2,7 +2,9 @@
 #include "genpwd_defs.h"
 #include <forms.h>
 
-#include "icon.xpm"
+#include "x11icon.lst"
+
+int xwin_assign_icon_bmp(Display *d, Window w, const void *data);
 
 #define TITLE_SHOW_CHARS 16
 
@@ -709,7 +711,7 @@ _do_x_random:
 
 	win = fl_winget();
 
-	fl_set_form_icon_data(form, icon);
+	xwin_assign_icon_bmp(fl_get_display(), win, x11_icon_bmp);
 	fl_set_cursor(win, XC_left_ptr);
 
 	do {
