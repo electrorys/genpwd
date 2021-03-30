@@ -1,5 +1,37 @@
 #include "genpwd.h"
 
+const char *pwl_charset_name(const char *charset)
+{
+	if (!charset) return default_password_charset;
+
+	if (!strcmp(charset, GENPWD_ALNUM_STRING)) return GENPWD_ALNUM_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_ALPHA_STRING)) return GENPWD_ALPHA_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_LOWER_STRING)) return GENPWD_LOWER_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_UPPER_STRING)) return GENPWD_UPPER_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_DIGIT_STRING)) return GENPWD_DIGIT_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_XDIGIT_STRING)) return GENPWD_XDIGIT_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_UXDIGIT_STRING)) return GENPWD_UXDIGIT_STRING_NAME;
+	else if (!strcmp(charset, GENPWD_ASCII_STRING)) return GENPWD_ASCII_STRING_NAME;
+
+	return charset;
+}
+
+const char *pwl_charset_string(const char *csname)
+{
+	if (!csname) return GENPWD_ALNUM_STRING;
+
+	if (!strcmp(csname, GENPWD_ALNUM_STRING_NAME)) return GENPWD_ALNUM_STRING;
+	else if (!strcmp(csname, GENPWD_ALPHA_STRING_NAME)) return GENPWD_ALPHA_STRING;
+	else if (!strcmp(csname, GENPWD_LOWER_STRING_NAME)) return GENPWD_LOWER_STRING;
+	else if (!strcmp(csname, GENPWD_UPPER_STRING_NAME)) return GENPWD_UPPER_STRING;
+	else if (!strcmp(csname, GENPWD_DIGIT_STRING_NAME)) return GENPWD_DIGIT_STRING;
+	else if (!strcmp(csname, GENPWD_XDIGIT_STRING_NAME)) return GENPWD_XDIGIT_STRING;
+	else if (!strcmp(csname, GENPWD_UXDIGIT_STRING_NAME)) return GENPWD_UXDIGIT_STRING;
+	else if (!strcmp(csname, GENPWD_ASCII_STRING_NAME)) return GENPWD_ASCII_STRING;
+
+	return csname;
+}
+
 void mkpwd_adjust(struct mkpwd_args *mkpwa)
 {
 	mkpwa->pwdmax = GENPWD_PWD_MAX;

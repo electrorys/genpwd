@@ -132,23 +132,8 @@ _baddfname:
 				break;
 			case 'U':
 				default_password_format = MKPWD_FMT_UNIV;
-				if (!strcmp(optarg, GENPWD_ALNUM_STRING_NAME))
-					optarg = GENPWD_ALNUM_STRING;
-				else if (!strcmp(optarg, GENPWD_ALPHA_STRING_NAME))
-					optarg = GENPWD_ALPHA_STRING;
-				else if (!strcmp(optarg, GENPWD_DIGIT_STRING_NAME))
-					optarg = GENPWD_DIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_XDIGIT_STRING_NAME))
-					optarg = GENPWD_XDIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_UXDIGIT_STRING_NAME))
-					optarg = GENPWD_UXDIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_ASCII_STRING_NAME))
-					optarg = GENPWD_ASCII_STRING;
-				else if (!strcmp(optarg, GENPWD_LOWER_STRING_NAME))
-					optarg = GENPWD_LOWER_STRING;
-				else if (!strcmp(optarg, GENPWD_UPPER_STRING_NAME))
-					optarg = GENPWD_UPPER_STRING;
-				default_password_charset = genpwd_strdup(optarg);
+				genpwd_free(default_password_charset);
+				default_password_charset = genpwd_strdup(pwl_charset_string(optarg));
 				break;
 			case 'j':
 				no_newline = YES;

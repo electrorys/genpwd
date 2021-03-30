@@ -88,6 +88,9 @@ extern char *default_password_charset;
 size_t xstrlcpy(char *dst, const char *src, size_t size);
 size_t xstrlcat(char *dst, const char *src, size_t size);
 
+const char *pwl_charset_name(const char *charset);
+const char *pwl_charset_string(const char *csname);
+
 void mkpwd_adjust(struct mkpwd_args *mkpwa);
 
 void genpwd_read_defaults(const char *path, gpwd_yesno noerr);

@@ -237,25 +237,10 @@ static void set_password_format(FL_OBJECT *obj, long data FL_UNUSED_ARG)
 		case 1: default_password_format = MKPWD_FMT_UNIV;
 			fl_activate_object(pwlchrs);
 			chrs = fl_get_input(pwlchrs);
-			if (!strcmp(chrs, GENPWD_ALNUM_STRING_NAME))
-				chrs = GENPWD_ALNUM_STRING;
-			else if (!strcmp(chrs, GENPWD_ALPHA_STRING_NAME))
-				chrs = GENPWD_ALPHA_STRING;
-			else if (!strcmp(chrs, GENPWD_DIGIT_STRING_NAME))
-				chrs = GENPWD_DIGIT_STRING;
-			else if (!strcmp(chrs, GENPWD_XDIGIT_STRING_NAME))
-				chrs = GENPWD_XDIGIT_STRING;
-			else if (!strcmp(chrs, GENPWD_UXDIGIT_STRING_NAME))
-				chrs = GENPWD_UXDIGIT_STRING;
-			else if (!strcmp(chrs, GENPWD_ASCII_STRING_NAME))
-				chrs = GENPWD_ASCII_STRING;
-			else if (!strcmp(chrs, GENPWD_LOWER_STRING_NAME))
-				chrs = GENPWD_LOWER_STRING;
-			else if (!strcmp(chrs, GENPWD_UPPER_STRING_NAME))
-				chrs = GENPWD_UPPER_STRING;
 			if (str_empty(chrs)) chrs = GENPWD_ALNUM_STRING_NAME;
+			fl_set_input(pwlchrs, chrs);
 			genpwd_free(default_password_charset);
-			default_password_charset = genpwd_strdup(chrs);
+			default_password_charset = genpwd_strdup(pwl_charset_string(chrs));
 			break;
 		case 2: default_password_format = MKPWD_FMT_CPWD; break;
 	}
@@ -475,23 +460,8 @@ _baddfname:
 				break;
 			case 'U':
 				default_password_format = MKPWD_FMT_UNIV;
-				if (!strcmp(optarg, GENPWD_ALNUM_STRING_NAME))
-					optarg = GENPWD_ALNUM_STRING;
-				else if (!strcmp(optarg, GENPWD_ALPHA_STRING_NAME))
-					optarg = GENPWD_ALPHA_STRING;
-				else if (!strcmp(optarg, GENPWD_DIGIT_STRING_NAME))
-					optarg = GENPWD_DIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_XDIGIT_STRING_NAME))
-					optarg = GENPWD_XDIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_UXDIGIT_STRING_NAME))
-					optarg = GENPWD_UXDIGIT_STRING;
-				else if (!strcmp(optarg, GENPWD_ASCII_STRING_NAME))
-					optarg = GENPWD_ASCII_STRING;
-				else if (!strcmp(optarg, GENPWD_LOWER_STRING_NAME))
-					optarg = GENPWD_LOWER_STRING;
-				else if (!strcmp(optarg, GENPWD_UPPER_STRING_NAME))
-					optarg = GENPWD_UPPER_STRING;
-				default_password_charset = genpwd_strdup(optarg);
+				genpwd_free(default_password_charset);
+				default_password_charset = genpwd_strdup(pwl_charset_string(optarg));
 				break;
 			case 'j':
 				no_newline = YES;
@@ -686,7 +656,7 @@ _do_x_random:
 	pwlchrs = fl_add_input(FL_NORMAL_INPUT, 5, 380 - yoffs, 270, 25, NULL);
 	fl_set_object_return(pwlchrs, FL_RETURN_CHANGED);
 	fl_deactivate_object(pwlchrs);
-	fl_set_input(pwlchrs, GENPWD_ALNUM_STRING_NAME);
+	fl_set_input(pwlchrs, "");
 
 	pwlfmt = fl_add_select(FL_DROPLIST_SELECT, 175, 355 - yoffs, 100, 20, NULL);
 	fl_add_select_items(pwlfmt, "Base64");
@@ -699,7 +669,7 @@ _do_x_random:
 			fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 1));
 			fl_deactivate_object(pwloffs);
 			fl_activate_object(pwlchrs);
-			fl_set_input(pwlchrs, default_password_charset);
+			fl_set_input(pwlchrs, pwl_charset_name(default_password_charset));
 			break;
 		case MKPWD_FMT_CPWD: fl_set_select_item(pwlfmt, fl_get_select_item_by_value(pwlfmt, 2));
 			fl_deactivate_object(pwloffs);
