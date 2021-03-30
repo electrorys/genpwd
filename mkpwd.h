@@ -22,7 +22,7 @@ struct mkpwd_args {
 	size_t szsalt;
 
 	short format;
-	char *charset;
+	char *charset, cs, ce;
 	size_t turns;
 	size_t offset;
 	size_t length;

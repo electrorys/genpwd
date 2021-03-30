@@ -106,24 +106,17 @@ _tryagainc3:		i = (size_t)tf_prng_range_r(rndata, (TF_UNIT_TYPE)0, (TF_UNIT_TYPE
 	else if (mkpwa->format == MKPWD_FMT_UNIV) {
 		char c, *s;
 		size_t x;
-		unsigned char S, E;
 
 		bpw = genpwd_realloc(bpw, TF_KEY_SIZE);
 		rndata = genpwd_malloc(tf_prng_datasize());
 
 		tf_prng_seedkey_r(rndata, bpw);
 
-		if (!mkpwa->charset) {
-			S = 0x20;
-			E = 0x7f;
-		}
-		else {
-			S = 1;
-			E = (unsigned char)UCHAR_MAX;
-		}
+		if (mkpwa->cs == '\0') mkpwa->cs = 0x20;
+		if (mkpwa->ce == '\0') mkpwa->ce = 0x7f;
 
 		for (x = 0, s = r; x < mkpwa->length; x++) {
-_tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)S, (TF_UNIT_TYPE)E);
+_tryagainu:		c = (char)tf_prng_range_r(rndata, (TF_UNIT_TYPE)mkpwa->cs, (TF_UNIT_TYPE)mkpwa->ce);
 			if (mkpwa->charset) {
 				if (strchr(mkpwa->charset, c)) {
 					*s = c;
