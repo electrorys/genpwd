@@ -514,7 +514,11 @@ _baddfname:
 	}
 	argc = 1;
 
-	if (merged == YES) goto _wriexit;
+	if (merged == YES) {
+		genpwd_loadids(NULL);
+		genpwd_will_saveids(SAVE_IDS_PLEASE);
+		goto _wriexit;
+	}
 
 	/* embedded genpwd copy */
 	if (fkeyname) {
