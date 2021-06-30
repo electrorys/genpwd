@@ -252,26 +252,29 @@ int genpwd_loadids_from_file(const char *path, ids_populate_fn idpfn)
 	return 1;
 }
 
-void genpwd_loadids(ids_populate_fn idpfn)
+static char *get_ids_path(void)
 {
-	char *path, *s, *t;
+	char *path, *s;
 
 	if (!genpwd_ids_filename) {
 		path = genpwd_malloc(PATH_MAX);
 		s = getenv("HOME");
-		if (!s) goto _done;
+		if (!s) s = "";
 		snprintf(path, PATH_MAX, "%s/%s", s, genpwd_ids_fname);
-		t = path;
 	}
-	else {
-		path = NULL;
-		t = genpwd_ids_filename;
-	}
+	else path = genpwd_strdup(genpwd_ids_filename);
+
+	return path;
+}
+
+void genpwd_loadids(ids_populate_fn idpfn)
+{
+	char *path = get_ids_path();
 
 	/* prevent overwriting of existing ids list if there is no valid key for it */
-	if (genpwd_loadids_from_file(t, idpfn) == 0) genpwd_will_saveids(SAVE_IDS_NEVER);
+	if (genpwd_loadids_from_file(path, idpfn) == 0) genpwd_will_saveids(SAVE_IDS_NEVER);
 
-_done:	genpwd_free(path);
+	genpwd_free(path);
 }
 
 void genpwd_listids(void)
@@ -293,25 +296,18 @@ void genpwd_listids(void)
 void genpwd_saveids(void)
 {
 	int fd = -1;
-	char *path, *s, *d, *t;
+	char *path, *s, *d;
 
 	path = NULL;
 	if (!ids) goto _out;
 	if (need_to_save_ids <= SAVE_IDS_NEVER) goto _out;
 
-	if (!genpwd_ids_filename) {
-		path = genpwd_malloc(PATH_MAX);
-		s = getenv("HOME");
-		if (!s) goto _out;
-		snprintf(path, PATH_MAX, "%s/%s", s, genpwd_ids_fname);
-		t = path;
-	}
-	else {
-		path = NULL;
-		t = genpwd_ids_filename;
-	}
+	/* load ids again so nothing is missed. */
+	genpwd_loadids(NULL);
 
-	fd = creat(t, S_IRUSR | S_IWUSR);
+	path = get_ids_path();
+
+	fd = creat(path, S_IRUSR | S_IWUSR);
 	if (fd == -1) goto _out;
 
 	s = d = data;
