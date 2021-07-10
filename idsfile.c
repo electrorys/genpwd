@@ -277,7 +277,7 @@ void genpwd_loadids(ids_populate_fn idpfn)
 	genpwd_free(path);
 }
 
-void genpwd_listids(void)
+void genpwd_listids(gpwd_yesno shownumbers)
 {
 	int x;
 
@@ -287,7 +287,10 @@ void genpwd_listids(void)
 	if (!ids || !nids) genpwd_say("No ids found.");
 
 	for (x = 0; x < nids; x++) {
-		if (ids[x]) genpwd_say("%s", ids[x]);
+		if (ids[x]) {
+			if (shownumbers) genpwd_say("%04x\t%s", x+1, ids[x]);
+			else genpwd_say("%s", ids[x]);
+		}
 	}
 
 	genpwd_exit(0);

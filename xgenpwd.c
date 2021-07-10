@@ -18,6 +18,8 @@ static gpwd_yesno genkeyf;
 static int kfd = 1;
 static gpwd_yesno merged = NO;
 static gpwd_yesno do_random_pw = NO;
+static gpwd_yesno shownumbers = NO;
+static int *delentries;
 
 static FL_FORM *form;
 static Window win;
@@ -81,6 +83,8 @@ static void usage(void)
 	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
 	genpwd_say("  -l pwlen: sets result password length");
 	genpwd_say("  -w outkey: write key or password to this file");
+	genpwd_say("  -n: with -i: show numbers near each entry.");
+	genpwd_say("  -D <N>: delete numbered entry from .genpwd.ids file.");
 	genpwd_say("\n");
 	genpwd_exit(1);
 }
@@ -441,7 +445,7 @@ _baddfname:
 	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:xl:U:BCiI:jM:NRkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:xl:U:BCiI:jM:NRkw:nD:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -484,7 +488,7 @@ _baddfname:
 				do_random_pw = YES;
 				break;
 			case 'i':
-				genpwd_listids();
+				genpwd_listids(shownumbers);
 				break;
 			case 'I':
 				/* will be erased later */
@@ -502,6 +506,14 @@ _baddfname:
 			case 'x':
 				do_not_show = YES;
 				break;
+			case 'n':
+				shownumbers = YES;
+				break;
+			case 'D':
+				x = (genpwd_szalloc(delentries) / sizeof(int));
+				delentries = genpwd_realloc(delentries, (x + 1) * sizeof(int));
+				delentries[x] = ATOX(optarg);
+				break;
 			default:
 				usage();
 				break;
@@ -513,6 +525,22 @@ _baddfname:
 		argv[x] = NULL;
 	}
 	argc = 1;
+
+	if (delentries) {
+		size_t n;
+
+		genpwd_loadids(NULL);
+		for (x = 0; x < (genpwd_szalloc(delentries) / sizeof(int)); x++) {
+			n = delentries[x];
+			if (n >= 1 && n <= nids) {
+				s = ids[n-1];
+				genpwd_delid(s);
+			}
+		}
+		genpwd_will_saveids(SAVE_IDS_PLEASE);
+		genpwd_free(delentries);
+		goto _wriexit;
+	}
 
 	if (merged == YES) {
 		genpwd_loadids(NULL);
