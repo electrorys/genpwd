@@ -33,32 +33,6 @@ is cut off main string, with length user wants to.
 
 That's how genpwd works.
 
-PLAIN TEXT EXAMPLE
-
-Suppose user fed Skein engine with such data of it's own:
-
-Master: "Your Bunny Wrote"[16]
-Name: "email:user@example.com"[22]
-Salt: {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}[8]
-
-genpwd concatenates all three into one:
-
-{Your Bunny Wrote{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}email:user@example.com}[46]
-
-genpwd passes this buffer of 46 bytes to Skein hash function.
-
-Suppose genpwd generated a string from 128 bytes of random data
-from user provided buffer of 46 bytes earlier:
-
-jhYrBg1lm0V31ZQMp8W0FrsW3IrunlL2mpkOfJVliGilLRvwWFtxZQMAAjWj8kaDByjtMBQy1IS1qQIv2H4uuerWzEegu8Io0XaoYmj2oRV7boH1NUe8zr6q2WuSH45ljfFiqMc8UzXBRm5OhDIANqlmggnBBGpFv3zqw
-
-User has configured genpwd to give output of 15 characters,
-starting at offset of 11 bytes:
-
-jhYrBg1lm0V [31ZQMp8W0FrsW3I] runlL2mpkOfJVliGilLRvwWFtxZQMAAjWj8kaDByjtMBQy1IS1qQIv2H4uuerWzEegu8Io0XaoYmj2oRV7boH1NUe8zr6q2WuSH45ljfFiqMc8UzXBRm5OhDIANqlmggnBBGpFv3zqw
-
-Result random password: 31ZQMp8W0FrsW3I
-
 HOW TO START?
 
 To use genpwd, you need to remember one thing: your master password (or many of them).
@@ -111,9 +85,10 @@ More complicated schemes can lead to more complicated choices there.
 
 DATA STORAGE
 
-Since xgenpwd, genpwd and xgenpwd put all name strings which user did generated
+Since xgenpwd was written, genpwd and xgenpwd put all name strings which user did generated
 passwords with onto disk in encrypted file named ".genpwd.ids", which resides
 in his home directory.
+
 This file is encrypted with tfcrypt compatible encryption mode, using user's
 salt setting and predefined tweak as a keys. So, if someone has a compiled binary
 with user settings, it's possible to decrypt this file.
@@ -125,6 +100,71 @@ as custom password length, offset or master password used to make the password.
 
 Without copy of binary, it's impossible to decrypt this file, if genpwd is
 configured properly.
+
+There is also (at your choice) an option not to embed sensitive personalisation
+data like salt and iterations count into result binary, but to keep them inside
+separate "config" file for which x/genpwd looks in your $HOME/.genpwd.defs
+The format of this file is simple, although it must meet very basic requirement:
+it shall always begin with line "# genpwd.defs". Below is an options list and example:
+
+default_turns_number: hashing function turnovers number,
+default_string_offset: base64 string offset from which generated password starts,
+default_password_length: base64 string length which, with default_string_offset forms a password "window",
+default_password_format:
+	* "default" will set password generation mode to classic Base64 windowed mode,
+	* "C" will set password generation to random character mode, i.e. it will gather
+	your result password characters from internal PRNG seeded with your static
+	personalisation data (so it will be always same password with same input and
+	same personalisation). It will also bias the output with more digital output,
+	i.e. the result password will contain more digits than traditional Base64 one,
+	* "U" stands for "Universal", the mode that you can configure with your own
+	character sets. For example, you need digital only PIN of four digits, then
+	you supply "0123456789" as the charset from which your final password will be formed.
+	Again, internal statically seeded PRNG is used to generate password for you.
+	This mode is not biased with digits, actually, YOU have to bias it with charset ;)
+default_password_charset: (only valid with "U" default_password_format) sets password charset.
+	You can use any ASCII compatible characters here. Current version of genpwd does NOT
+	support UTF-8, so generating localized passwords is not possible (at the moment). This
+	can change in future tho.
+	There are also aliases for certain character sets accepted here (ranges given in regex syntax):
+	<alnum>: same as [a-zA-Z0-9]
+	<alpha>: same as [a-zA-Z]
+	<lower>: same as [a-z]
+	<upper>: same as [A-Z]
+	<digit>: same as [0-9]
+	<xdigit>: same as [0-9a-f]
+	<uxdigit>: same as [0-9A-F]
+	<ascii>: every printable ASCII character
+genpwd_save_ids: will genpwd save name strings for you into encrypted ".genpwd.ids"?
+genpwd_salt: your personalisation salt data, alongside of turns number. It is encoded in base64 form here!
+
+Here is sample .genpwd.defs to generate 4 digit PIN numbers:
+
+	# genpwd.defs
+	default_turns_number = 65537
+	default_password_format = U
+	default_password_charset = 0123456789
+	genpwd_save_ids = 1
+	genpwd_salt = iMLT25rVaYUoxGOIFpAj5A==
+
+Any setting provided by .genpwd.defs file overrides defaults stored inside binary!
+
+SETTINGS VERIFICATION
+
+Both genpwd and xgenpwd, when asked for their version will emit something like:
+
+	genpwd passwords keeper, version 188.
+	Defaults hash: moEcRAeWbF9BGddi/Hm52RC2LkAryffE2hxMrYiwPSo=
+
+Note "Defaults hash: [base64]" line. The hash here is an abstract value. It's role for you is
+exactly same as password hint given at password generation time, but it is extended to your
+configuration now aswell.
+
+This value is generated with a single skein256 pass over your personalisation data, so try not to
+share this value much. Use version display only to verify that you run correct personalisation.
+
+This value can change between genpwd releases and it's not considered "stable" (only password hint
+is considered "stable"). Expect changes when upgrading program.
 
 SECURITY
 
@@ -154,8 +194,9 @@ TRICKS
 
 If you concerned about binary leakage to someone, then either:
 - Keep it safe from other eyes (put it into your $HOME/bin)
-- Or run it with different settings.
-There are command line options -n, -o, -l, -s, which configure internal state including
+- Or run it with different settings,
+- Or use separate .genpwd.defs file placed into $HOME.
+There are command line options which configure internal state including
 salt which can be loaded from file or stdin.
 Then you must keep your salt file and settings data private too.
 
@@ -169,4 +210,10 @@ There were three versions of this program:
 
 At least idea is not fresh, and it's there since 2009.
 
-genpwd and xgenpwd are by Lynx, Mar2017.
+genpwd and xgenpwd are by Andrey Rys, Jul2021.
+
+LICENSE
+
+Boring licensing stuff is put as C comment in each source text and in LICENSE file aswell.
+Shortly speaking: MIT, permissive, just reference me as an originator/author (plus all blames too).
+There is no any warranty or responsibility for correctness, take all risk.
