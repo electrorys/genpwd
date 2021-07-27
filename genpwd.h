@@ -71,7 +71,6 @@ enum { NO, YES };
 #define NOSIZE ((size_t)-1)
 #define CSTR_SZ(x) (sizeof(x)-1)
 #define CPPSTR(x) #x
-#define ATOX(s) (strtoul(s, NULL, 16))
 
 #define GENPWD_ALNUM_STRING_NAME "<alnum>"
 #define GENPWD_ALNUM_STRING MKPWD_ALPHA_STRING MKPWD_DIGIT_STRING
@@ -159,7 +158,7 @@ int genpwd_delid(const char *id);
 void genpwd_addid(const char *id);
 void genpwd_loadids(ids_populate_fn idpfn);
 int genpwd_loadids_from_file(const char *path, ids_populate_fn idpfn);
-void genpwd_listids(gpwd_yesno shownumbers);
+void genpwd_listids(void);
 int genpwd_will_saveids(int x);
 void genpwd_saveids(void);
 
