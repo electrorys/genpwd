@@ -29,9 +29,7 @@ static char *masterpw;
 static char *identifier;
 static gpwd_yesno no_newline;
 static char *fkeyname;
-static gpwd_yesno genkeyf;
 static int kfd = 1;
-static gpwd_yesno merged = NO;
 static gpwd_yesno do_random_pw = NO;
 
 char *progname;
@@ -68,14 +66,8 @@ static void usage(void)
 	genpwd_say("  -U " GENPWD_LOWER_STRING_NAME ": generate password characters from [a-z] charset");
 	genpwd_say("  -U " GENPWD_UPPER_STRING_NAME ": generate password characters from [A-Z] charset");
 	genpwd_say("  -U " GENPWD_ASCII_STRING_NAME ": generate password characters from all ASCII characters");
-	genpwd_say("  -k: request generation of binary keyfile");
 	genpwd_say("  -j: omit newline when printing password");
-	genpwd_say("  -M <file>: load ids from file and merge them into current list.");
-	genpwd_say("    After merging, program will terminate. This option can be given multiple times.");
-	genpwd_say("  -N: do not save ID data typed in Name field");
 	genpwd_say("  -R: do not ask for anything, and just generate random password of specified quality.");
-	genpwd_say("  -i: list identifiers from .genpwd.ids");
-	genpwd_say("  -I file: use alternate ids file instead of .genpwd.ids");
 	genpwd_say("  -l pwlen: set result password length");
 	genpwd_say("  -w outkey: write key or password to this file");
 	genpwd_say("\n");
@@ -134,10 +126,8 @@ int main(int argc, char **argv)
 _baddfname:
 	genpwd_free(s);
 
-	if (genpwd_save_ids == NO) genpwd_will_saveids(SAVE_IDS_NEVER);
-
 	opterr = 0;
-	while ((c = getopt(argc, argv, "L:l:U:BCiI:jM:NRkw:")) != -1) {
+	while ((c = getopt(argc, argv, "L:l:U:BCiI:jM:NRk:")) != -1) {
 		switch (c) {
 			case 'L':
 				genpwd_read_defaults(optarg, NO);
@@ -146,7 +136,7 @@ _baddfname:
 				default_password_length = strtoul(optarg, &stoi, 10);
 				if (!fkeyname
 				&& (!str_empty(stoi) || default_password_length == 0))
-					xerror(NO, YES, "%s: invalid password length number", optarg);
+					xexit("%s: invalid password length number", optarg);
 				break;
 			case 'B':
 				default_password_format = MKPWD_FMT_B64;
@@ -162,36 +152,16 @@ _baddfname:
 			case 'j':
 				no_newline = YES;
 				break;
-			case 'M':
-				c = genpwd_loadids_from_file(optarg, NULL);
-				if (c == -1) xerror(NO, NO, "%s", optarg);
-				else if (c == 0) xerror(NO, YES, "%s: cannot decipher", optarg);
-				merged = YES;
-				break;
 			case 'N':
-				if (genpwd_save_ids == NO) {
-					if (genpwd_will_saveids(SAVE_IDS_QUERY) == SAVE_IDS_NEVER)
-						genpwd_will_saveids(SAVE_IDS_OVERRIDE);
-					else genpwd_will_saveids(SAVE_IDS_NEVER);
-				}
-				else genpwd_will_saveids(SAVE_IDS_NEVER);
+			case 'M':
+			case 'i':
+			case 'I':
+				xexit("unimplemented");
 				break;
 			case 'R':
 				do_random_pw = YES;
 				break;
-			case 'i':
-				genpwd_listids();
-				break;
-			case 'I':
-				/* will be erased later */
-				if (genpwd_ids_filename) genpwd_free(genpwd_ids_filename);
-				genpwd_ids_filename = genpwd_strdup(optarg);
-				break;
 			case 'k':
-				if (!fkeyname) xerror(NO, YES, "specify outkey with -w.");
-				genkeyf = YES;
-				break;
-			case 'w':
 				if (fkeyname) genpwd_free(fkeyname);
 				fkeyname = genpwd_strdup(optarg);
 				break;
@@ -207,19 +177,12 @@ _baddfname:
 	}
 	argc = 1;
 
-	if (merged == YES) {
-		genpwd_loadids(NULL);
-		genpwd_will_saveids(SAVE_IDS_PLEASE);
-		goto _wriexit;
-	}
-
 	mkpwd_adjust(mkpwa);
 
 	mkpwa->pwd = masterpw;
 	mkpwa->id = identifier;
 
 	if (do_random_pw == YES) {
-		genpwd_will_saveids(SAVE_IDS_NEVER);
 		genpwd_getrandom(masterpw, genpwd_szalloc(masterpw));
 		genpwd_getrandom(identifier, genpwd_szalloc(identifier));
 		mkpwa->szpwd = genpwd_szalloc(masterpw);
@@ -234,10 +197,10 @@ _baddfname:
 	getps->charfilter = getps_filter;
 	getps->maskchar = 'x';
 	x = xgetpasswd(getps);
-	if (x == NOSIZE) xerror(NO, NO, "getting password");
+	if (x == NOSIZE) xerror("getting password");
 	if (x == ((size_t)-2)) genpwd_exit(1);
 
-	if (mkpwd_hint(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password hint");
+	if (mkpwd_hint(mkpwa) == MKPWD_NO) xexit("error generating password hint");
 	genpwd_esay("Password hint: %s", mkpwa->result);
 	genpwd_free(mkpwa->result);
 
@@ -248,35 +211,29 @@ _baddfname:
 	getps->charfilter = getps_plain_filter;
 	getps->maskchar = 0;
 	x = xgetpasswd(getps);
-	if (x == NOSIZE) xerror(NO, NO, "getting name");
+	if (x == NOSIZE) xerror("getting name");
 	if (x == ((size_t)-2)) genpwd_exit(1);
-
-	genpwd_loadids(NULL);
-	genpwd_addid(identifier);
-	genpwd_will_saveids(SAVE_IDS_PLEASE);
 
 _do_random:
 	if (fkeyname) {
 		if (!(!strcmp(fkeyname, "-")))
 			kfd = creat(fkeyname, S_IRUSR | S_IWUSR);
-		if (kfd == -1) xerror(NO, NO, "%s", fkeyname);
+		if (kfd == -1) xerror("%s", fkeyname);
 		if (kfd != 1) no_newline = YES;
 	}
 
-	if (!genkeyf) {
-		if (mkpwd(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating password");
+	if (!fkeyname) {
+		if (mkpwd(mkpwa) == MKPWD_NO) xexit("error generating password");
 		write(kfd, mkpwa->result, mkpwa->szresult);
 		if (!no_newline) write(kfd, "\n", 1);
 	}
 	else {
-		if (mkpwd_key(mkpwa) == MKPWD_NO) xerror(NO, YES, "error generating keyfile");
+		if (mkpwd_key(mkpwa) == MKPWD_NO) xexit("error generating keyfile");
 		write(kfd, mkpwa->result, mkpwa->szresult);
 	}
 
 	genpwd_free(mkpwa->result);
 	if (kfd != 1) close(kfd);
-_wriexit:
-	genpwd_saveids();
 	genpwd_exit(0);
 
 	return 0;

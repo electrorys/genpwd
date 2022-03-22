@@ -97,10 +97,6 @@ void genpwd_exit(int status);
 void signal_handler(int sig);
 void install_signals(void);
 
-extern gpwd_yesno genpwd_save_ids;
-#define genpwd_ids_fname ".genpwd.ids"
-#define genpwd_ids_magic "# _genpwd_ids file"
-
 extern gpwd_byte genpwd_salt[GENPWD_MAX_SALT];
 extern size_t genpwd_szsalt;
 extern size_t default_password_length;
@@ -140,27 +136,8 @@ char *genpwd_strdup(const char *s);
 void genpwd_finirandom(void);
 void genpwd_getrandom(void *buf, size_t sz);
 
-void xerror(gpwd_yesno noexit, gpwd_yesno noerrno, const char *fmt, ...);
-
-extern char **ids;
-extern size_t nids;
-typedef void (*ids_populate_fn)(const char *str);
-
-#define SAVE_IDS_NEVER		-1 /* like -N */
-#define SAVE_IDS_QUERY		0 /* query status */
-#define SAVE_IDS_PLEASE		1 /* yes please write out */
-#define SAVE_IDS_OVERRIDE	2 /* if you'll not, I'll shoot you I promise! */
-
-extern char *genpwd_ids_filename; /* if set - open this file instead of default genpwd_ids_fname. */
-
-int genpwd_is_dupid(const char *id);
-int genpwd_delid(const char *id);
-void genpwd_addid(const char *id);
-void genpwd_loadids(ids_populate_fn idpfn);
-int genpwd_loadids_from_file(const char *path, ids_populate_fn idpfn);
-void genpwd_listids(void);
-int genpwd_will_saveids(int x);
-void genpwd_saveids(void);
+void xerror(const char *fmt, ...);
+void xexit(const char *fmt, ...);
 
 void genpwd_vfsay(FILE *where, int addnl, const char *fmt, va_list ap);
 void genpwd_nvesay(const char *fmt, va_list ap);

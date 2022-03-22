@@ -42,13 +42,13 @@ static void get_urandom(void *buf, size_t size)
 	/* Most common blocking. */
 	if (fd == -1) fd = open("/dev/random", O_RDONLY);
 	/* Very bad, is this a crippled chroot? */
-	if (fd == -1) xerror(0, 1, "urandom is required");
+	if (fd == -1) xexit("urandom is required");
 
 	x = 0;
 _again:	rd = read(fd, ubuf, size);
 	/* I want full random block, and there is no EOF can be! */
 	if (rd < size) {
-		if (x >= 100) xerror(0, 1, "urandom always returns less bytes! (rd = %zu)", rd);
+		if (x >= 100) xexit("urandom always returns less bytes! (rd = %zu)", rd);
 		x++;
 		ubuf += rd;
 		size -= rd;

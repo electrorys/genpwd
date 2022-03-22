@@ -43,15 +43,15 @@ void install_signals(void)
 	for (x = 1; x < NSIG; x++) signal(x, signal_handler);
 }
 
-void xerror(gpwd_yesno noexit, gpwd_yesno noerrno, const char *fmt, ...)
+static void genpwd_error(gpwd_yesno noexit, gpwd_yesno noerrno, const char *fmt, va_list ap)
 {
-	va_list ap;
+	va_list t;
 	char *s;
 
 	genpwd_nesay("%s: ", progname);
-	va_start(ap, fmt);
-	genpwd_nvesay(fmt, ap);
-	va_end(ap);
+	va_copy(t, ap);
+	genpwd_nvesay(fmt, t);
+	va_end(t);
 	if (errno && !noerrno) {
 		s = strerror(errno);
 		genpwd_esay(": %s", s);
@@ -64,4 +64,22 @@ void xerror(gpwd_yesno noexit, gpwd_yesno noerrno, const char *fmt, ...)
 	}
 
 	genpwd_exit(2);
+}
+
+void xerror(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	genpwd_error(NO, NO, fmt, ap);
+	va_end(ap);
+}
+
+void xexit(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	genpwd_error(NO, YES, fmt, ap);
+	va_end(ap);
 }

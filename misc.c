@@ -156,7 +156,7 @@ void *genpwd_read_alloc_file(const char *file, size_t *rsz)
 	void *r;
 
 	fd = open(file, O_RDONLY);
-	if (fd == -1) xerror(0, 0, "%s", file);
+	if (fd == -1) xerror("%s", file);
 	r = genpwd_read_alloc_fd(fd, GENPWD_PWD_MAX, 0, rsz);
 	close(fd);
 	return r;

@@ -54,7 +54,7 @@ static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 	t = mmap(base, nsz, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 	if (t == MAP_FAILED || t != base) {
 		if (t != base && t != MAP_FAILED) munmap(t, nsz);
-		xerror(0, 1, "OOM: failed to allocate %zu bytes!", failsz);
+		xexit("OOM: failed to allocate %zu bytes!", failsz);
 		return 0;
 	}
 
@@ -64,7 +64,7 @@ static size_t genpwd_oom_handler(struct smalloc_pool *spool, size_t failsz)
 
 static void genpwd_ub_handler(struct smalloc_pool *spool, const void *offender)
 {
-	xerror(0, 1, "UB: %p is not from our data storage!", offender);
+	xexit("UB: %p is not from our data storage!", offender);
 }
 
 static int genpwd_memory_initialised;
@@ -88,12 +88,12 @@ _again:		base = getrndbase();
 			if (genpwd_memory_pool != base
 			&& genpwd_memory_pool != MAP_FAILED) munmap(base, genpwd_memory_pool_sz);
 			tries++;
-			if (tries > 100) xerror(0, 1, "all mmap attempts failed");
+			if (tries > 100) xexit("all mmap attempts failed");
 			goto _again;
 		}
 		if (!sm_set_default_pool(
 		genpwd_memory_pool, genpwd_memory_pool_sz, 1, genpwd_oom_handler))
-			xerror(0, 1, "memory pool initialisation failed!");
+			xexit("memory pool initialisation failed!");
 		genpwd_memory_initialised = 1;
 	}
 }
@@ -148,7 +148,7 @@ char *genpwd_strdup(const char *s)
 {
 	size_t n = strlen(s);
 	char *r = genpwd_zalloc(n+1);
-	if (!r) xerror(0, 0, "strdup");
+	if (!r) xerror("strdup");
 	memcpy(r, s, n);
 	return r;
 }
